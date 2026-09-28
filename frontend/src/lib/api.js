@@ -1,12 +1,14 @@
 import { getLocale, translate, translateServerMessage } from './i18n/index.js';
 import { storageError } from './stores.js';
+import { apiURL, desktopHeaders } from './desktop.js';
 
 export async function apiFetch(url, opts = {}) {
   const locale = getLocale();
-  const r = await fetch(url, {
+  const r = await fetch(apiURL(url), {
     ...opts,
     headers: {
       ...opts.headers,
+      ...desktopHeaders(),
       'X-UI-Locale': locale,
       'Accept-Language': locale === 'en' ? 'en-US,en;q=0.9' : 'zh-CN,zh;q=0.9',
     },
@@ -19,7 +21,10 @@ export async function apiFetch(url, opts = {}) {
       storageError.set(data.storage_error);
     }
     // Backend mostly responds in Chinese today; translate known strings on the client.
-    throw new Error(translateServerMessage(raw, locale));
+    const error = new Error(translateServerMessage(raw, locale));
+    error.code = data.code;
+    error.data = data;
+    throw error;
   }
   return r;
 }

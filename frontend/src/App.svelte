@@ -1,6 +1,6 @@
 <script>
   import { currentPage } from './lib/router.js';
-  import { progress, taskRunning, contextPage, toastStore, currentProject, projectLanguage, config, settings, chatSessions, currentChatSession } from './lib/stores.js';
+  import { progress, taskRunning, contextPage, toastStore, currentProject, projectLanguage, config, settings, chatSessions, currentChatSession, sharedCardLibraryOpen } from './lib/stores.js';
   import { connectSSE } from './lib/sse.js';
   import { api } from './lib/api.js';
   import { onMount, onDestroy } from 'svelte';
@@ -18,6 +18,8 @@
   import ChatPanel from './components/ChatPanel.svelte';
   import ConfirmModal from './components/ConfirmModal.svelte';
   import StorageErrorModal from './components/StorageErrorModal.svelte';
+  import SharedCardLibrary from './components/SharedCardLibrary.svelte';
+  import { isDesktop, openExternalURL } from './lib/desktop.js';
 
   let chatPanel;
   let initializing = true;
@@ -72,6 +74,12 @@
   let latestVersion = '';
   let hasUpdate = false;
   const latestReleaseURL = 'https://github.com/Nigh/show-me-the-story/releases/latest';
+
+  async function openRelease(event) {
+    if (!isDesktop()) return;
+    event.preventDefault();
+    await openExternalURL(latestReleaseURL);
+  }
 
   $: $contextPage = $currentPage;
 
@@ -154,7 +162,7 @@
     closeNavigation();
   }
   function handleShellKeydown(event) {
-    if (event.key === 'Escape') { closeNavigation(); closeAssistant(); return; }
+    if (event.key === 'Escape') { closeNavigation(); closeAssistant(); sharedCardLibraryOpen.set(false); return; }
     if (event.key !== 'Tab') return;
     const panel = document.getElementById(navigationOpen ? 'workspace-navigation' : assistantOpen ? 'writing-assistant' : '');
     if (!panel) return;
@@ -179,7 +187,7 @@
       <span class="badge badge-xs badge-ghost font-mono">{appVersion}</span>
     {/if}
     {#if hasUpdate}
-      <a href={latestReleaseURL} target="_blank" rel="noopener" class="badge badge-xs badge-warning gap-0.5 no-underline">
+      <a href={latestReleaseURL} target="_blank" rel="noopener" on:click={openRelease} class="badge badge-xs badge-warning gap-0.5 no-underline">
         {$t('app.newVersion')}
       </a>
     {/if}
@@ -217,6 +225,9 @@
       {$uiLocale === 'en' ? $t('app.uiLang.en') : $t('app.uiLang.zh')}
     </button>
     {#if $currentProject}
+      <button class="btn btn-outline btn-xs" on:click={() => sharedCardLibraryOpen.set(true)} aria-expanded={$sharedCardLibraryOpen}>
+        {$t('sharedCards.open')}
+      </button>
       <button bind:this={assistantButton} class="btn btn-outline btn-sm xl:hidden" on:click={openAssistant} aria-expanded={assistantOpen} aria-controls="writing-assistant">{$t('app.assistant')}</button>
     {/if}
   </header>
@@ -299,4 +310,5 @@
 
   <ConfirmModal />
   <StorageErrorModal />
+  <SharedCardLibrary />
 </div>

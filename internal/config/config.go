@@ -94,11 +94,18 @@ func DefaultConfigForLang(lang string) *Config {
 			TargetWordsPerChapter: 5000,
 		},
 		SkillConfig: &SkillConfig{
-			EnabledSkills: make(map[string]bool),
+			EnabledSkills: defaultEnabledSkills(lang),
 		},
 	}
 	cfg.Prompts.ApplyDefaults(lang)
 	return cfg
+}
+
+func defaultEnabledSkills(lang string) map[string]bool {
+	if i18n.NormalizeLanguage(lang) == i18n.LangEN {
+		return map[string]bool{"adult-fiction-en": true}
+	}
+	return map[string]bool{"adult-fiction-zh": true}
 }
 
 func LoadAPIConfig(path string) (*APIConfig, error) {

@@ -23,18 +23,20 @@ This guide follows the writing process. For your first project, complete a small
 
 ### Launch and projects
 
-Extract a release, start the executable, and open `http://localhost:48090`. Closing the browser does not stop a backend task. Stop the task and wait for saving before exiting the program.
+Extract a release. On Windows, double-clicking opens the desktop window by default. On Linux/macOS, start the executable and open `http://localhost:48090`. An idle desktop window closes directly; while a task is running, the app asks before cancelling and waiting. In Web mode, closing the browser does not stop the backend task.
 
 The project name identifies its directory; the novel title identifies the work. They can differ. Choose Chinese or English when creating the project. Project language determines prompts, prose, and applicable skills and should not be changed after creation. You can switch the interface language independently.
 
-Data defaults to the working directory at launch. To use a fixed location, pass an existing directory and verify the startup log. If the port is occupied, set `PORT`, for example in PowerShell:
+Data defaults to the working directory at launch. To use a fixed location, pass an existing directory with `--data-dir`; the Windows GUI enforces one instance per data directory. Add `--web` for browser fallback. `PORT` applies only to Web mode, for example in PowerShell:
 
 ```powershell
 $env:PORT = "48091"
-.\show-me-the-story.exe "D:\Novels"
+.\show-me-the-story.exe --web --data-dir "D:\Novels"
 ```
 
 Then open `http://localhost:48091`.
+
+GUI exports first show a native save dialog. Cancelling leaves existing files unchanged and does not report success. If WebView2 Runtime is missing, the portable Windows release invokes its embedded official bootstrapper; `--web` remains available as a fallback.
 
 ### Connect a model
 
@@ -66,6 +68,16 @@ Example:
 > Fantasy mystery. Third-person limited, following only the heroine. She investigates her sister’s disappearance. City plants grow under moonlight and become dormant in sunlight. Keep dialogue concise and reveal clues through action.
 
 Add the protagonist, key supporting characters, and essential worldview entries. You do not need every subplot before starting. Motivation and ability limits often help consistency more than lengthy appearance descriptions. You may ask AI to generate initial settings, but review the result.
+
+### Reuse shared cards
+
+Card library in the top-right corner opens a global sidebar shared by every project. In Configuration, use Add to library on API, story, writing style, or an individual character, worldview, organization, or relationship; dragging into the sidebar remains an optional shortcut. After switching projects, click the small Use button on a shared card, or drag it back onto the matching section.
+
+Edit opens the complete form for that card type. For example, a character card includes age, appearance, personality, background, motivation, abilities, and notes. Editing changes only the library copy, never the source project; organization members and relationship endpoints are limited to dependencies already carried by the card.
+
+Character and worldview root cards always receive a new ID. Organization cards include their member characters; relationship cards include both endpoints and any organization members. Import reuses matching dependencies by name, creates anything missing, and remaps every reference so no relationship or membership is left dangling.
+
+Importing a story or style card into a project with accepted prose requires another confirmation. Type, style, or point-of-view changes can use the existing reconciliation flow. Cards live in `shared-cards/` under the program directory and are excluded from project ZIP backups. API cards store the API key as plaintext; list and detail responses mask it, but copying the full data directory also copies the secret.
 
 ### Step 2: Plan a small first batch
 
@@ -254,7 +266,9 @@ Text, outline, and report exports are readable deliverables, not full project ba
 
 ### Skills
 
-All skills are disabled by default. Establish a basic workflow before enabling a few skills matching the project language. Scope determines whether a skill applies to writing, polishing, outlining, or proofreading. Enabling one does not inject it into every request; logs show active skills.
+New projects enable the built-in **Adult Fiction Craft (Fixed Level 4)** skill matching the project language by default; all other skills remain disabled, and existing projects are not opted in during upgrades. The adult skill applies only to outlining, chapter generation, revision, and polishing, requires unambiguously adult and clearly consenting fictional participants, and can be disabled on the Skills page. Model providers may still restrict output under their own content policies.
+
+Enable only a few other skills that match the project language. Scope determines whether a skill applies to writing, polishing, outlining, or proofreading. Enabling one does not inject it into every request; logs show active skills. The Chinese adult skill includes direct, literary, and contemporary-commercial vocabulary guidance while enforcing repetition control, physical continuity, POV consistency, transitions, and aftermath; its vocabulary is a palette rather than a checklist.
 
 Install by pasting Markdown, uploading Markdown or ZIP, or selecting a folder. User skills live in the shared `skills/<id>/` directory and are enabled separately for each project. A standard package contains `skill.json` and `SKILL.md`, optionally safe text resources. Scripts and binaries are not executed.
 
@@ -282,6 +296,7 @@ Common files:
 ```text
 <data directory>/
 ├── api.json                 # Shared API configuration, potentially including keys
+├── shared-cards/            # Global shared cards; API cards may contain a plaintext API key
 ├── skills/                  # Installed user skills
 └── storys/<project>/
     ├── config.json          # Language, story settings, prompts, skill selections

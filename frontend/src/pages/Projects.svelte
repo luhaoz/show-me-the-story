@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import logo from '../../../docs/show-me-the-story.webp';
   import { api, apiFetch } from '../lib/api.js';
+  import { saveServerExport } from '../lib/downloads.js';
   import { currentProject, projects, addToast, showConfirm, taskRunning, progress, config, settings, chatSessions, currentChatSession, projectLanguage } from '../lib/stores.js';
   import { t, setLocale } from '../lib/i18n/index.js';
 
@@ -97,13 +98,12 @@
   async function backupProject(name) {
     backupBusy = true;
     try {
-      const response = await apiFetch('/api/projects/' + encodeURIComponent(name) + '/backup');
-      const url = URL.createObjectURL(await response.blob());
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${name}-${new Date().toISOString().slice(0, 10)}.zip`;
-      link.click();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      await saveServerExport({
+        kind: 'project-backup',
+        projectName: name,
+        suggestedName: `${name}-${new Date().toISOString().slice(0, 10)}.zip`,
+        url: '/api/projects/' + encodeURIComponent(name) + '/backup',
+      });
     } catch (e) { addToast(e.message, 'error'); }
     finally { backupBusy = false; }
   }

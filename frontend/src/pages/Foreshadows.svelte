@@ -6,6 +6,7 @@
     foreshadowSuggestions, foreshadowShowSuggestions
   } from '../lib/stores.js';
   import { t } from '../lib/i18n/index.js';
+  import { saveText } from '../lib/downloads.js';
 
   let viewMode = 'list'; // list | timeline | markdown
   let roadmapMarkdown = '';
@@ -217,15 +218,13 @@
     }
   }
 
-  function downloadRoadmap() {
+  async function downloadRoadmap() {
     if (!roadmapMarkdown) return;
-    const blob = new Blob([roadmapMarkdown], { type: 'text/markdown;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'Foreshadows.md';
-    a.click();
-    URL.revokeObjectURL(url);
+    try {
+      await saveText({ suggestedName: 'Foreshadows.md', content: roadmapMarkdown, mime: 'text/markdown;charset=utf-8' });
+    } catch (e) {
+      addToast(e.message, 'error');
+    }
   }
 </script>
 

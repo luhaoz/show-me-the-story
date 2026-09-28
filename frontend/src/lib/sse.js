@@ -3,6 +3,7 @@ import { addLog, addToast, config, progress, skills, taskRunning, streamingConte
 import { api } from './api.js';
 import { getLocale, translate, formatLogEntry, formatToolResult } from './i18n/index.js';
 import { TOKEN_POLL_INTERVAL_MS } from './tokenPoll.js';
+import { eventURL } from './desktop.js';
 
 let eventSource = null;
 let reconnectTimer = null;
@@ -127,7 +128,7 @@ async function syncTaskFromStatus() {
 export function connectSSE() {
   if (eventSource) eventSource.close();
   const locale = getLocale();
-  eventSource = new EventSource(`/api/events?locale=${encodeURIComponent(locale)}`);
+  eventSource = new EventSource(eventURL('/api/events', { locale }));
 
   eventSource.addEventListener('open', () => {
     syncTaskFromStatus();

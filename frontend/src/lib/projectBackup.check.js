@@ -17,6 +17,12 @@ const context = vm.createContext({
     if (fail) throw new Error('request failed');
     return { blob: async () => 'archive' };
   },
+  saveServerExport: async options => {
+    calls.push(options);
+    if (fail) throw new Error('request failed');
+    downloads.push(options.suggestedName);
+    return { cancelled: false };
+  },
   api: async () => [], projects: { set() {} },
   document: { createElement: () => ({ click() { downloads.push(this.download); } }) },
   URL: { createObjectURL: () => 'blob:backup', revokeObjectURL() {} },
@@ -30,6 +36,7 @@ fail = false;
 await vm.runInContext('backupProject("my story")', context);
 assert.match(downloads[0], /^my story-.*\.zip$/);
 assert.equal(calls.at(-1).url, '/api/projects/my%20story/backup');
+assert.equal(calls.at(-1).kind, 'project-backup');
 
 vm.runInContext('restoreName = "new story"; restoreFiles = ["zip bytes"]; restoreInput = { value: "selected.zip" };', context);
 fail = true;

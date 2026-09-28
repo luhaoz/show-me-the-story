@@ -1,6 +1,7 @@
 <script>
   import { onMount, tick } from 'svelte';
   import { api, apiFetch } from '../lib/api.js';
+  import { saveServerExport } from '../lib/downloads.js';
   import { config, progress, taskRunning, streamingContent, streamingChapterIdx, selectedChapter, autoConfirm, addToast, confirmModal } from '../lib/stores.js';
   import { navigate } from '../lib/router.js';
   import { t } from '../lib/i18n/index.js';
@@ -445,14 +446,12 @@
     const written = chapters.filter(c => c.content_rev);
     if (written.length === 0) { addToast($t('writing.toasts.exportEmpty'), 'error'); return; }
     try {
-      const r = await apiFetch('/api/export/txt');
-      const blob = await r.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${$config?.story?.title || p.title || $t('writing.export.defaultName')}.txt`;
-      a.click();
-      URL.revokeObjectURL(url);
+      const result = await saveServerExport({
+        kind: 'book',
+        suggestedName: `${$config?.story?.title || p.title || $t('writing.export.defaultName')}.txt`,
+        url: '/api/export/txt',
+      });
+      if (result?.cancelled) return;
       addToast($t('writing.toasts.exportDone', { n: written.length }), 'success');
     } catch (e) { addToast(e.message, 'error'); }
   }

@@ -1,10 +1,17 @@
 *.json
+!wails.json
+!build/windows/info.json
 *.exe
 /show-me-the-story
 .kilo
 storys/
+shared-cards/
 frontend/node_modules
 frontend/dist
+frontend/package.json.md5
+frontend/wailsjs/
+/build/bin/
+/release/
 showmethestory
 dev.log
 graphify-out/

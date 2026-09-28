@@ -1,6 +1,7 @@
 <script>
   import { onMount, tick } from 'svelte';
-  import { api, apiFetch } from '../lib/api.js';
+  import { api } from '../lib/api.js';
+  import { saveServerExport } from '../lib/downloads.js';
   import { progress, postprocess, taskRunning, addToast, confirmModal, config } from '../lib/stores.js';
   import { t } from '../lib/i18n/index.js';
 
@@ -19,11 +20,11 @@
 
   async function download(url, mark) {
     try {
-      const r = await apiFetch(url);
-      const blob = await r.blob(), a = document.createElement('a'); a.href = URL.createObjectURL(blob);
       const base = $config?.story?.title || $progress?.title || 'novel';
-      a.download = url.includes('outline') ? `${base}-outlines.md` : url.includes('proofread') ? `${base}-proofreading-report.md` : `${base}.txt`;
-      a.click(); URL.revokeObjectURL(a.href); mark();
+      const kind = url.includes('outline') ? 'outline' : url.includes('proofread') ? 'proofread-report' : 'book';
+      const suggestedName = kind === 'outline' ? `${base}-outlines.md` : kind === 'proofread-report' ? `${base}-proofreading-report.md` : `${base}.txt`;
+      const result = await saveServerExport({ kind, suggestedName, url });
+      if (!result?.cancelled) mark();
     } catch (e) { addToast(e.message, 'error'); }
   }
   async function acknowledge() { if (!backupChecked || !downloadedBook || !downloadedOutline) return; const value = await api('POST', '/api/proofread/backup'); postprocess.set({book_complete:true,state:value}); }

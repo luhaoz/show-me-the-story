@@ -16,6 +16,7 @@ const context = vm.createContext({
   clearInterval: id => intervals.delete(id),
   TOKEN_POLL_INTERVAL_MS: 2000,
   getLocale: () => 'en', translate: key => key, addToast: () => {},
+  eventURL: (path, params) => `${path}?locale=${params.locale}`,
   api: async (method, url) => url === '/api/status'
     ? new Promise(resolve => pending.push(resolve)) : {},
   EventSource: class {

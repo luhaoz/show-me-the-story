@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"context"
+	"crypto/subtle"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -22,9 +23,17 @@ import (
 	"time"
 )
 
-// StartWebServer wires all routes and blocks serving HTTP. staticFiles must
-// be rooted at the built frontend (index.html at its top level).
-func StartWebServer(apiCfg *config.APIConfig, apiCfgPath string, logger *sse.LogBroadcaster, port, progDir, version string, staticFiles fs.FS) {
+// Application owns the HTTP routes and the task lifecycle used by both the
+// browser server and the Windows desktop shell.
+type Application struct {
+	handler  http.Handler
+	handlers *Handlers
+}
+
+// NewApplication wires all API routes. If staticFiles is non-nil, it also
+// serves the browser frontend. desktopToken protects the loopback desktop API;
+// pass an empty token for ordinary web mode.
+func NewApplication(apiCfg *config.APIConfig, apiCfgPath string, logger *sse.LogBroadcaster, progDir, version string, staticFiles fs.FS, desktopToken string) *Application {
 	h := NewHandlers(apiCfg, apiCfgPath, logger, progDir, version)
 
 	mux := http.NewServeMux()
@@ -46,6 +55,14 @@ func StartWebServer(apiCfg *config.APIConfig, apiCfgPath string, logger *sse.Log
 	mux.HandleFunc("GET /api/config/api", h.GetAPIConfig)
 	mux.HandleFunc("PUT /api/config/api", h.PutAPIConfig)
 	mux.HandleFunc("POST /api/config/api/test", h.PostAPITest)
+
+	// Global shared setting-card library.
+	mux.HandleFunc("GET /api/shared-cards", h.GetSharedCards)
+	mux.HandleFunc("POST /api/shared-cards", h.PostSharedCard)
+	mux.HandleFunc("GET /api/shared-cards/{id}", h.GetSharedCard)
+	mux.HandleFunc("PUT /api/shared-cards/{id}", h.PutSharedCard)
+	mux.HandleFunc("DELETE /api/shared-cards/{id}", h.DeleteSharedCard)
+	mux.HandleFunc("POST /api/shared-cards/{id}/import", h.PostSharedCardImport)
 
 	// Project-scoped endpoints (require project selection)
 	mux.HandleFunc("GET /api/config", h.GetConfig)
@@ -157,31 +174,75 @@ func StartWebServer(apiCfg *config.APIConfig, apiCfgPath string, logger *sse.Log
 
 	mux.HandleFunc("GET /api/events", h.SSEHandler)
 
-	fileServer := http.FileServer(http.FS(staticFiles))
+	if staticFiles != nil {
+		fileServer := http.FileServer(http.FS(staticFiles))
 
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
-		defer cancel()
-		r = r.WithContext(ctx)
+		mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+			ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+			defer cancel()
+			r = r.WithContext(ctx)
 
-		if r.URL.Path == "/" || r.URL.Path == "/index.html" {
-			w.Header().Set("Content-Type", "text/html; charset=utf-8")
-			data, err := fs.ReadFile(staticFiles, "index.html")
-			if err != nil {
-				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			if r.URL.Path == "/" || r.URL.Path == "/index.html" {
+				w.Header().Set("Content-Type", "text/html; charset=utf-8")
+				data, err := fs.ReadFile(staticFiles, "index.html")
+				if err != nil {
+					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+					return
+				}
+				w.Write(data)
 				return
 			}
-			w.Write(data)
-			return
-		}
-		fileServer.ServeHTTP(w, r)
-	})
+			fileServer.ServeHTTP(w, r)
+		})
+	}
 
-	handler := recoveryMiddleware(corsMiddleware(loggingMiddleware(projectWriteMiddleware(mux))))
+	handler := recoveryMiddleware(corsMiddleware(loggingMiddleware(desktopAuthMiddleware(desktopToken, projectWriteMiddleware(mux)))))
+	return &Application{handler: handler, handlers: h}
+}
+
+func (a *Application) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	a.handler.ServeHTTP(w, r)
+}
+
+func (a *Application) IsTaskRunning() bool {
+	return a != nil && a.handlers != nil && a.handlers.isTaskRunning()
+}
+
+func (a *Application) CancelTask() bool {
+	if a == nil || a.handlers == nil {
+		return false
+	}
+	h := a.handlers
+	h.taskMu.Lock()
+	defer h.taskMu.Unlock()
+	if !h.taskRunning || h.taskCancel == nil {
+		return false
+	}
+	h.taskCancel()
+	return true
+}
+
+func (a *Application) WaitIdle(ctx context.Context) error {
+	ticker := time.NewTicker(50 * time.Millisecond)
+	defer ticker.Stop()
+	for a.IsTaskRunning() {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-ticker.C:
+		}
+	}
+	return nil
+}
+
+// StartWebServer starts the browser UI and blocks. staticFiles must be rooted
+// at the built frontend (index.html at its top level).
+func StartWebServer(apiCfg *config.APIConfig, apiCfgPath string, logger *sse.LogBroadcaster, port, progDir, version string, staticFiles fs.FS) {
+	app := NewApplication(apiCfg, apiCfgPath, logger, progDir, version, staticFiles, "")
 
 	srv := &http.Server{
 		Addr:         port,
-		Handler:      handler,
+		Handler:      app,
 		ReadTimeout:  30 * time.Second,
 		WriteTimeout: 0,
 		IdleTimeout:  120 * time.Second,
@@ -408,9 +469,28 @@ func corsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-UI-Locale, Accept-Language, X-Content-Rev, X-Confirm-Fact-Impact")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-UI-Locale, Accept-Language, X-Content-Rev, X-Confirm-Fact-Impact, X-Desktop-Token")
 		if r.Method == "OPTIONS" {
 			w.WriteHeader(http.StatusOK)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+func desktopAuthMiddleware(token string, next http.Handler) http.Handler {
+	if token == "" {
+		return next
+	}
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		provided := r.Header.Get("X-Desktop-Token")
+		if r.URL.Path == "/api/events" {
+			provided = r.URL.Query().Get("desktop_token")
+		}
+		if subtle.ConstantTimeCompare([]byte(provided), []byte(token)) != 1 {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusUnauthorized)
+			json.NewEncoder(w).Encode(map[string]string{"code": "desktop_unauthorized", "error": "desktop authorization failed"})
 			return
 		}
 		next.ServeHTTP(w, r)

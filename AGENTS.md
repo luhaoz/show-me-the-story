@@ -4,21 +4,26 @@
 
 ## 项目概览
 
-- 单二进制 Go Web 应用，完整应用体积不到 5 MB；Go 后端只使用标准库，前端产物与内置 Skill 通过 `embed.FS` 嵌入。
-- Go `1.25.1`，模块 `showmethestory`；默认端口 `:48090`，可用 `PORT` 覆盖。
+- 单二进制 Go 应用；Windows amd64 默认使用 Wails v2.15.0 原生窗口，Linux/macOS 保持 Web 模式。前端产物与内置 Skill 通过 `embed.FS` 嵌入。
+- Go `1.25.1`，模块 `showmethestory`；Web 模式默认端口 `:48090`，可用 `PORT` 覆盖。Windows GUI 使用随机 loopback 端口，`PORT` 不生效。
 - 前端：Vite 5、Svelte 4、Tailwind CSS 4、DaisyUI 5、`@xianii/design-system`；Playwright 仅使用系统 Google Chrome 生成 README 截图。
 - 当前项目格式固定为 v4；项目默认保存在程序目录的 `storys/<项目名>/`。
 - 项目语言 `zh` / `en` 决定模型提示词、正文和内置 Skill；UI 语言由浏览器独立切换。
 - 默认英文入口为 `README.md`，中文入口为 `README.zh.md`；语言导航保持独立的首行链接列表，便于继续增加语言。详细流程维护于 `docs/guide.zh.md` 与 `docs/guide.en.md`，按创作顺序提供双语步骤与故障排查；许可证为 MIT。
+- 桌面 GUI、单卡共享库、表单布局和 Windows 发布打包的维护说明集中于 `docs/gui-and-shared-cards.zh.md`；程序发布 ZIP 与个人作品备份必须保持区分，架构边界变化时同步该文档。
 
 ## 常用命令
 
 ```bash
 task build                 # npm install + 前端构建 + Go 二进制
 task build:go              # 只构建 Go；要求 frontend/dist 已存在
-task dev                   # 构建并启动后端
+task dev                   # 构建并启动 Web 模式
 task dev:frontend          # Vite 开发服务器 :5173，代理 /api 到 :48090
+task dev:gui               # Wails 热重载窗口
+task build:gui:windows     # Windows amd64 GUI，WebView2 embed 策略
 task screenshots           # 用固定离线样例重建 README 截图
+dev.bat                    # Windows 双击启动 Wails 热重载 GUI
+.\package.ps1 -Version dev # 检查、构建 Windows GUI 并生成便携 ZIP
 
 go build ./...
 go test ./...
@@ -32,12 +37,12 @@ cd frontend && npm run check # 所有前端回归检查
 
 提交前至少运行 `go build ./...`、`go test ./...`、`go vet ./...`；修改前端时再运行前端构建及受影响的 `.check.js`。
 
-PR 与 main/v4 推送通过同一检查工作流在 Linux/Windows 原生执行构建、测试及 vet；Linux 额外运行 race 检查。发布复用该工作流，检查成功后才生成发布产物。
+PR 与 main/v4 推送通过同一检查工作流在 Linux/Windows 原生执行构建、测试及 vet；Windows 固定安装 Wails v2.15.0 并编译 GUI，Linux 额外运行 race 检查。发布复用该工作流，Windows 产出 GUI 便携 ZIP，Linux/macOS 产出 Web 版。
 
 ## 架构边界
 
 ```text
-main.go
+main.go + run_web.go + run_windows.go
 └── internal/httpapi
     ├── internal/agent
     │   └── internal/story
@@ -50,7 +55,10 @@ main.go
         └── internal/fsutil
 ```
 
-- `main.go`：程序目录、API 配置、开发日志、嵌入前端和服务装配。
+- `main.go`：命令行、程序目录、API 配置、开发日志和嵌入前端；`run_web.go` 保留浏览器服务，`run_windows.go` 负责 Wails 窗口、loopback API、原生保存和关闭生命周期。
+- `internal/desktop/`：不依赖 Wails 的桌面保存基础能力，使用同目录临时文件与受限回滚替换。
+- `dev.bat`：Windows 根目录 Wails GUI 开发入口，先切换到脚本目录并使用该目录下的 `storys/`；直接查找 `go env GOPATH` 下已安装的 `wails.exe`，其次使用 PATH，不得用 `go run ...@version` 导致每次启动重新联网解析 CLI。
+- `package.ps1`：Windows 一键发布入口，默认执行前端构建/检查、Go test/vet 和 Wails `embed` 构建，再生成 `release/` 便携 ZIP；必须排除 `storys/`、`api.json`、`shared-cards/`、用户 Skill、日志和其他本机数据。
 - `internal/httpapi/`：路由、请求校验、项目管理、异步任务互斥、SSE 和本地化错误。
 - `internal/agent/`：助理循环、工具解析与执行、危险操作确认。
 - `internal/story/`：大纲、写作、事实与设定、伏笔、导入、Skill、会话、校订等领域逻辑。
@@ -60,6 +68,8 @@ main.go
 - `frontend/src/`：Svelte 页面、组件、stores、API/SSE/i18n；生产产物仅在 `frontend/dist/`。
 
 依赖必须保持单向：`httpapi → agent → story → 基础包`。`sse` 的事件负载保持 `any`，不得反向依赖领域包。不要恢复已废弃的根目录 `static/` 单页实现。
+
+Windows GUI 只负责窗口、静态资源、原生对话框和生命周期；REST API 与 SSE 仍由真实 `net/http` loopback 服务提供，不迁移为 Wails binding。每次 GUI 启动生成临时 256-bit 令牌：普通 API 使用 `X-Desktop-Token`，SSE 使用 `desktop_token` 查询参数，令牌不得落盘或写日志。`RuntimeInfo` 是前端获取地址与令牌的唯一入口。GUI 导出只允许全文、大纲、校订报告、项目备份四类服务端资源；伏笔路线图通过 `SaveText` 保存。Windows 桌面代码必须使用 build tag 隔离，非 Windows 构建不得引入桌面运行时。
 
 ## 持久化与兼容边界
 
@@ -72,6 +82,7 @@ main.go
 - 章节 `Content` 是正文事实源；`Blocks` 从正文派生并保持稳定 ID，块编辑后重建 `Content`。
 - 影响正文的请求使用内容版本校验；关联事实受影响时必须显式确认，过期版本返回 409。
 - 项目列表支持完整项目 ZIP 备份及恢复为新项目；不包含全局 API 配置或用户 Skill。备份/恢复仅在 AI 空闲时执行，请求写操作与备份快照串行；恢复先在隐藏临时目录校验路径、大小、JSON、v4 和正文完整性，再发布新目录，禁止覆盖已有项目。上限为 ZIP 256 MiB、解压总量 512 MiB、单文件 64 MiB、20000 个条目。
+- 全局共享卡片使用独立 schema v1，位于程序目录 `shared-cards/`，不改变项目格式且不进入项目 ZIP；每个文件只保存一个 API、故事、风格、人物、世界观、组织或关系根卡。组织卡必须内嵌成员人物，关系卡必须内嵌两端实体及组织成员。导入根人物/世界观/组织时分配新 ID；依赖按规范化名称复用并补齐缺项，所有成员与关系端点统一重映射。API Key 在 API 卡片中本地明文保存，但列表/详情不得返回原文。文件使用原子写入和尽可能严格的权限，未知 schema、损坏文件或非法引用不得进入列表或项目状态。
 
 ## 核心流程
 
@@ -122,13 +133,15 @@ main.go
 - 每个模型请求以 `ContextBudgetTokens - MaxTokens - max(4096, 5% 上下文窗口)` 作为保守估算的输入上限；模型端点能报告更小的真实窗口时自动向下收紧配置，最终预检超限属于不可重试错误。
 - 提示词占位符是 `config.RenderPrompt` 的 `{{.Key}}` 字符串替换，不是 `text/template`。
 - 新增 prompt 字段时同步更新 `PromptsConfig`、中英默认模板和 `ApplyDefaults`；新增注入块或 system prompt 必须同时提供中英文。
-- Skill 包必须包含 schema v1 的 `skill.json` 及其声明的 Markdown 入口（通常为 `SKILL.md`），仅接受安全校验后的 `.md/.txt/.json`；所有 Skill 默认禁用，并按项目语言、`applies_to` 和动作类别过滤。
+- Skill 包必须包含 schema v1 的 `skill.json` 及其声明的 Markdown 入口（通常为 `SKILL.md`），仅接受安全校验后的 `.md/.txt/.json`；用户 Skill 默认禁用，并按项目语言、`applies_to` 和动作类别过滤。
+- 新建项目默认启用对应语言的内置 `adult-fiction-zh` / `adult-fiction-en`，既有项目加载时不得补开。该 Skill 固定为成人尺度 4，仅进入大纲生成/修订、章节生成/修订和润色，必须限定明确成年且明确合意的虚构参与者；中文版本维护直白、文学、现代网文三种语域的紧凑词汇与用法规则。
 - 内置 Skill 位于 `internal/story/embeds/skills/`，修改后需要重新编译。
 
 ## 前端约定
 
 - 启动立即尝试恢复服务端当前项目，不等待版本检查；SSE 恢复或任务开始也会触发恢复。任务运行时禁止返回项目列表。
 - 所有请求复用 `api` / `apiFetch`，携带当前 UI 语言并统一解析本地化错误；下载失败不得提示成功。
+- 前端挂载前必须先初始化 `lib/desktop.js`；Web 模式保持相对 URL，GUI 模式统一拼接 loopback API Base、注入临时令牌并构造带查询令牌的 SSE URL。导出复用 `lib/downloads.js`，GUI 走原生保存，Web 走 Blob 下载。
 - UI 文案走 `$t('key', params)`；后端日志/Agent 结果使用 key + args；新增可见文案必须同步 `zh.js` 与 `en.js`。
 - 项目语言不可变；选择/创建项目时 UI 语言可跟随项目初始化，之后允许独立切换。
 - 使用 `@xianii/design-system` token。正文默认 16px；`text-sm` 用于紧凑控件，`text-xs` 仅用于元数据。
@@ -139,6 +152,9 @@ main.go
 - 写作章节列表宽 345px；章节正文按需加载，重复点击当前章节必须能够重试失败请求。
 - 事实/设定面板位于正文卡片内并默认折叠；摘要常驻，事实标记可展开并定位来源段落。
 - 核心操作必须有直接页面按钮，不依赖聊天；破坏性操作用 `ConfirmModal`，基础可访问性不得为精简让步。
+- 主界面「卡片库」以可并行操作的右侧栏呈现；配置标题和单条设定都必须提供常显的「加入卡片库」按钮，拖入保存仅作为快捷方式；共享卡必须提供常显的小型「使用」按钮，也可拖回同类型区域。导入组织或关系时自动补齐缺少依赖；已有正文的故事/风格卡要求二次确认，类型、风格或视角变化沿用设定协调流程。
+- 共享卡编辑器必须按根卡类型展示与配置页语义一致的完整字段，不得只编辑卡片标题和说明；编辑只修改库中副本。组织成员和关系端点只能引用卡片内已保存的依赖快照。API 详情继续隐藏密钥，编辑时空密钥表示保留原值。
+- 共享卡编辑器的字段布局复用配置页的紧凑表单规格：小号块级标签、`w-full` 的 `input/select/textarea`、双列响应式网格和 `bg-base-300` 内层面板；弹窗头部、滚动正文和底部操作区相互独立，禁止恢复依赖 `form-control` 的漂移布局。卡片库条目沿用设定卡的图标、摘要和右侧操作区结构。
 - SSE 的 content/chat chunk 使用现有缓冲节流；任务结束清空聊天缓冲，重连、结束事件和运行中轮询均以 `/api/status` 校准状态，不使用本地事件计数判定空闲；跨越更新任务事件或请求的旧响应不得覆盖新状态。
 
 ## 测试与精简规则

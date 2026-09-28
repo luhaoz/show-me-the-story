@@ -30,10 +30,20 @@ tasks:
       - go build -o {{.BINARY}} .
 
   dev:
-    desc: 编译并启动开发服务器
+    desc: 编译并启动 Web 开发服务器
     deps: [build]
     cmds:
-      - ./{{.BINARY}}
+      - ./{{.BINARY}} --web
+
+  build:gui:windows:
+    desc: 构建 Windows Wails GUI（嵌入 WebView2 bootstrapper）
+    cmds:
+      - wails build -platform windows/amd64 -webview2 embed
+
+  dev:gui:
+    desc: 启动 Wails GUI 热重载开发环境
+    cmds:
+      - wails dev
 
   screenshots:
     desc: 用固定离线样例重建 README 截图

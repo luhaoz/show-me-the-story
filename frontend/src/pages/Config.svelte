@@ -5,6 +5,7 @@
   import { t } from '../lib/i18n/index.js';
   import { resolveChatCompletionsURL } from '../lib/apiUrl.js';
   import ConfigChangePanel from '../components/ConfigChangePanel.svelte';
+  import { beginSettingCardDrag, readSharedCardDrag, importSharedCard, saveSettingCard } from '../lib/sharedCards.js';
 
   export let sendToChat = async () => {};
 
@@ -443,15 +444,29 @@
       } catch (e) { addToast(e.message, 'error'); }
     });
   }
+
+  async function dropSharedCard(event, expectedKind) {
+    event.preventDefault();
+    const card = readSharedCardDrag(event);
+    if (!card) return;
+    if (card.kind !== expectedKind) {
+      addToast($t('sharedCards.wrongTarget'), 'error');
+      return;
+    }
+    await importSharedCard(card, $t);
+  }
 </script>
 
 <div class="space-y-3">
   <ConfigChangePanel />
   <!-- API + Story Config: side by side -->
   <div class="grid grid-cols-1 @3xl:grid-cols-2 gap-4">
-    <div class="card bg-base-200">
+    <div class="card bg-base-200" role="region" aria-label={$t('config.api.title')} on:dragover|preventDefault on:drop={(event) => dropSharedCard(event, 'api')}>
       <div class="card-body p-4 gap-2">
-        <h3 class="card-title text-base">{$t('config.api.title')}</h3>
+        <div class="flex items-center justify-between gap-2">
+          <h3 class="card-title text-base cursor-grab" draggable="true" on:dragstart={(event) => beginSettingCardDrag(event, 'api')} title={$t('sharedCards.dragHint')}>⋮⋮ {$t('config.api.title')}</h3>
+          <button class="btn btn-outline btn-xs whitespace-nowrap" on:click={() => saveSettingCard('api', '', $t)} disabled={$taskRunning || testingApi}>{$t('sharedCards.add')}</button>
+        </div>
         <div class="grid grid-cols-2 gap-x-3 gap-y-1.5">
           <div class="col-span-2">
             <span class="text-xs text-base-content/65 mb-0.5 block">{$t('config.api.baseUrl')}</span>
@@ -506,9 +521,12 @@
       </div>
     </div>
 
-    <div class="card bg-base-200">
+    <div class="card bg-base-200" role="region" aria-label={$t('config.story.title')} on:dragover|preventDefault on:drop={(event) => dropSharedCard(event, 'story')}>
       <div class="card-body p-4 gap-2">
-        <h3 class="card-title text-base">{$t('config.story.title')}</h3>
+        <div class="flex items-center justify-between gap-2">
+          <h3 class="card-title text-base cursor-grab" draggable="true" on:dragstart={(event) => beginSettingCardDrag(event, 'story')} title={$t('sharedCards.dragHint')}>⋮⋮ {$t('config.story.title')}</h3>
+          <button class="btn btn-outline btn-xs whitespace-nowrap" on:click={() => saveSettingCard('story', '', $t)} disabled={$taskRunning}>{$t('sharedCards.add')}</button>
+        </div>
         {#if hasAccepted}
           <div class="alert alert-warning text-xs py-1.5 px-3">
             <span>{$t('config.story.acceptedHint')}</span>
@@ -536,9 +554,12 @@
   </div>
 
   <!-- Writing Style & POV -->
-  <div class="card bg-base-200">
+  <div class="card bg-base-200" role="region" aria-label={$t('config.style.title')} on:dragover|preventDefault on:drop={(event) => dropSharedCard(event, 'style')}>
     <div class="card-body p-4 gap-2">
-      <h3 class="card-title text-base">{$t('config.style.title')}</h3>
+      <div class="flex items-center justify-between gap-2">
+        <h3 class="card-title text-base cursor-grab" draggable="true" on:dragstart={(event) => beginSettingCardDrag(event, 'style')} title={$t('sharedCards.dragHint')}>⋮⋮ {$t('config.style.title')}</h3>
+        <button class="btn btn-outline btn-xs whitespace-nowrap" on:click={() => saveSettingCard('style', '', $t)} disabled={$taskRunning}>{$t('sharedCards.add')}</button>
+      </div>
       <div>
         <span class="text-xs text-base-content/65 mb-0.5 block">{$t('config.style.label')}</span>
         <textarea class="textarea w-full h-28 text-base" bind:value={localStoryCfg.writing_style} placeholder={$t('config.style.placeholder')} disabled={$taskRunning}></textarea>
@@ -554,7 +575,7 @@
   </div>
 
   <!-- Characters -->
-  <div class="card bg-base-200">
+  <div class="card bg-base-200" role="region" aria-label={$t('config.char.title')} on:dragover|preventDefault on:drop={(event) => dropSharedCard(event, 'character')}>
     <div class="card-body p-4 gap-2">
       <!-- svelte-ignore a11y-click-events-have-key-events -->
       <!-- svelte-ignore a11y-no-static-element-interactions -->
@@ -568,15 +589,18 @@
             <p class="text-xs text-base-content/65 col-span-full py-2">{$t('config.char.empty')}</p>
           {:else}
             {#each chars as c}
-              <div class="flex items-start gap-2.5 bg-base-300 rounded-lg p-2.5 group">
+              <div class="flex items-start gap-2.5 bg-base-300 rounded-lg p-2.5 group cursor-grab" role="group" draggable="true" on:dragstart={(event) => beginSettingCardDrag(event, 'character', c.id)} title={$t('sharedCards.dragHint')}>
                 <div class="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center text-xs font-bold shrink-0">{stripNameMarks(c.name)[0]}</div>
                 <div class="flex-1 min-w-0">
                   <div class="text-sm font-medium truncate">{stripNameMarks(c.name)}</div>
                   <div class="text-xs text-base-content/65 line-clamp-1">{c.personality || c.background || c.age || ''}</div>
                 </div>
-                <div class="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                  <button class="btn btn-outline btn-xs px-1" on:click={() => openCharForm(c)} disabled={$taskRunning}>{$t('common.edit')}</button>
-                  <button class="btn btn-error btn-outline btn-xs px-1" on:click={() => deleteCharacter(c.id)} disabled={$taskRunning}>{$t('common.delete')}</button>
+                <div class="flex flex-col items-end gap-1 shrink-0">
+                  <button class="btn btn-outline btn-xs px-1 whitespace-nowrap" on:click={() => saveSettingCard('character', c.id, $t)} disabled={$taskRunning}>{$t('sharedCards.add')}</button>
+                  <div class="flex gap-0.5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
+                    <button class="btn btn-outline btn-xs px-1" on:click={() => openCharForm(c)} disabled={$taskRunning}>{$t('common.edit')}</button>
+                    <button class="btn btn-error btn-outline btn-xs px-1" on:click={() => deleteCharacter(c.id)} disabled={$taskRunning}>{$t('common.delete')}</button>
+                  </div>
                 </div>
               </div>
             {/each}
@@ -639,7 +663,7 @@
   </div>
 
   <!-- Worldview -->
-  <div class="card bg-base-200">
+  <div class="card bg-base-200" role="region" aria-label={$t('config.wv.title')} on:dragover|preventDefault on:drop={(event) => dropSharedCard(event, 'worldview')}>
     <div class="card-body p-4 gap-2">
       <!-- svelte-ignore a11y-click-events-have-key-events -->
       <!-- svelte-ignore a11y-no-static-element-interactions -->
@@ -661,15 +685,18 @@
             <p class="text-xs text-base-content/65 col-span-full py-2">{$t('config.wv.empty')}</p>
           {:else}
             {#each filteredWvs as w}
-              <div class="flex items-start gap-2.5 bg-base-300 rounded-lg p-2.5 group">
+              <div class="flex items-start gap-2.5 bg-base-300 rounded-lg p-2.5 group cursor-grab" role="group" draggable="true" on:dragstart={(event) => beginSettingCardDrag(event, 'worldview', w.id)} title={$t('sharedCards.dragHint')}>
                 <div class="w-8 h-8 rounded-lg bg-accent/20 text-accent flex items-center justify-center text-xs font-bold shrink-0">{w.name[0]}</div>
                 <div class="flex-1 min-w-0">
                   <div class="text-sm font-medium truncate">{w.name} <span class="text-xs font-normal text-base-content/30">[{catLabels[w.category] || w.category}]</span></div>
                   <div class="text-xs text-base-content/65 line-clamp-1">{w.description}</div>
                 </div>
-                <div class="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                  <button class="btn btn-outline btn-xs px-1" on:click={() => openWvForm(w)} disabled={$taskRunning}>{$t('common.edit')}</button>
-                  <button class="btn btn-error btn-outline btn-xs px-1" on:click={() => deleteWorldview(w.id)} disabled={$taskRunning}>{$t('common.delete')}</button>
+                <div class="flex flex-col items-end gap-1 shrink-0">
+                  <button class="btn btn-outline btn-xs px-1 whitespace-nowrap" on:click={() => saveSettingCard('worldview', w.id, $t)} disabled={$taskRunning}>{$t('sharedCards.add')}</button>
+                  <div class="flex gap-0.5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
+                    <button class="btn btn-outline btn-xs px-1" on:click={() => openWvForm(w)} disabled={$taskRunning}>{$t('common.edit')}</button>
+                    <button class="btn btn-error btn-outline btn-xs px-1" on:click={() => deleteWorldview(w.id)} disabled={$taskRunning}>{$t('common.delete')}</button>
+                  </div>
                 </div>
               </div>
             {/each}
@@ -721,7 +748,7 @@
   </div>
 
   <!-- Organizations -->
-  <div class="card bg-base-200">
+  <div class="card bg-base-200" role="region" aria-label={$t('config.org.title')} on:dragover|preventDefault on:drop={(event) => dropSharedCard(event, 'organization')}>
     <div class="card-body p-4 gap-2">
       <!-- svelte-ignore a11y-click-events-have-key-events -->
       <!-- svelte-ignore a11y-no-static-element-interactions -->
@@ -735,7 +762,7 @@
             <p class="text-xs text-base-content/65 col-span-full py-2">{$t('config.org.empty')}</p>
           {:else}
             {#each orgs as o}
-              <div class="flex items-start gap-2.5 bg-base-300 rounded-lg p-2.5 group">
+              <div class="flex items-start gap-2.5 bg-base-300 rounded-lg p-2.5 group cursor-grab" role="group" draggable="true" on:dragstart={(event) => beginSettingCardDrag(event, 'organization', o.id)} title={$t('sharedCards.dragHint')}>
                 <div class="w-8 h-8 rounded-lg bg-warning/20 text-warning flex items-center justify-center text-xs font-bold shrink-0">{o.name[0]}</div>
                 <div class="flex-1 min-w-0">
                   <div class="text-sm font-medium truncate">{o.name} {#if o.type}<span class="text-xs font-normal text-base-content/30">[{o.type}]</span>{/if}</div>
@@ -744,9 +771,12 @@
                     <div class="text-xs text-base-content/65 line-clamp-1 mt-0.5">{$t('config.org.membersList', { names: (o.members || []).map(id => nameById[id] || id).join(', ') })}</div>
                   {/if}
                 </div>
-                <div class="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                  <button class="btn btn-outline btn-xs px-1" on:click={() => openOrgForm(o)} disabled={$taskRunning}>{$t('common.edit')}</button>
-                  <button class="btn btn-error btn-outline btn-xs px-1" on:click={() => deleteOrganization(o.id)} disabled={$taskRunning}>{$t('common.delete')}</button>
+                <div class="flex flex-col items-end gap-1 shrink-0">
+                  <button class="btn btn-outline btn-xs px-1 whitespace-nowrap" on:click={() => saveSettingCard('organization', o.id, $t)} disabled={$taskRunning}>{$t('sharedCards.add')}</button>
+                  <div class="flex gap-0.5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
+                    <button class="btn btn-outline btn-xs px-1" on:click={() => openOrgForm(o)} disabled={$taskRunning}>{$t('common.edit')}</button>
+                    <button class="btn btn-error btn-outline btn-xs px-1" on:click={() => deleteOrganization(o.id)} disabled={$taskRunning}>{$t('common.delete')}</button>
+                  </div>
                 </div>
               </div>
             {/each}
@@ -797,7 +827,7 @@
   </div>
 
   <!-- Relations -->
-  <div class="card bg-base-200">
+  <div class="card bg-base-200" role="region" aria-label={$t('config.rel.title')} on:dragover|preventDefault on:drop={(event) => dropSharedCard(event, 'relation')}>
     <div class="card-body p-4 gap-2">
       <!-- svelte-ignore a11y-click-events-have-key-events -->
       <!-- svelte-ignore a11y-no-static-element-interactions -->
@@ -811,7 +841,7 @@
             <p class="text-xs text-base-content/65 col-span-full py-2">{$t('config.rel.empty')}</p>
           {:else}
             {#each rels as r}
-              <div class="flex items-center gap-2 bg-base-300 rounded-lg p-2.5 group">
+              <div class="flex items-center gap-2 bg-base-300 rounded-lg p-2.5 group cursor-grab" role="group" draggable="true" on:dragstart={(event) => beginSettingCardDrag(event, 'relation', r.id)} title={$t('sharedCards.dragHint')}>
                 <div class="flex-1 min-w-0 text-sm">
                   <div class="flex items-center gap-1.5 flex-wrap">
                     <span class="font-medium">{entityIcons[r.source_type] || ''} {nameById[r.source_id] || r.source_id}</span>
@@ -820,9 +850,12 @@
                   </div>
                   <p class="mt-1 text-xs leading-relaxed text-secondary break-words">{r.label}</p>
                 </div>
-                <div class="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                  <button class="btn btn-outline btn-xs px-1" on:click={() => openRelForm(r)} disabled={$taskRunning}>{$t('common.edit')}</button>
-                  <button class="btn btn-error btn-outline btn-xs px-1" on:click={() => deleteRelation(r.id)} disabled={$taskRunning}>{$t('common.delete')}</button>
+                <div class="flex flex-col items-end gap-1 shrink-0">
+                  <button class="btn btn-outline btn-xs px-1 whitespace-nowrap" on:click={() => saveSettingCard('relation', r.id, $t)} disabled={$taskRunning}>{$t('sharedCards.add')}</button>
+                  <div class="flex gap-0.5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
+                    <button class="btn btn-outline btn-xs px-1" on:click={() => openRelForm(r)} disabled={$taskRunning}>{$t('common.edit')}</button>
+                    <button class="btn btn-error btn-outline btn-xs px-1" on:click={() => deleteRelation(r.id)} disabled={$taskRunning}>{$t('common.delete')}</button>
+                  </div>
                 </div>
               </div>
             {/each}

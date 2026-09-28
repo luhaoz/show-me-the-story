@@ -11,76 +11,96 @@ permissions:
 jobs:
   checks:
     uses: ./.github/workflows/check.yml
-  release:
+
+  web-artifacts:
     needs: checks
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v6
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-
       - name: Verify tag is on main
         run: |
           git fetch origin main
-          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
-            echo "Tag ${GITHUB_REF_NAME} is not on main branch, skipping release."
-            exit 1
-          fi
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+      - uses: actions/setup-node@v6
         with:
           node-version: "24"
           cache: npm
           cache-dependency-path: frontend/package-lock.json
-
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: false
       - name: Build frontend
         working-directory: frontend
         run: |
           npm ci
           npm run build
-
-      - name: Setup Go
-        uses: actions/setup-go@v6
-        with:
-          go-version-file: go.mod
-          # 项目零依赖无 go.sum，关闭缓存避免报错
-          cache: false
-
-      - name: Cross-compile binaries
+      - name: Build Linux and macOS Web binaries
         env:
           CGO_ENABLED: "0"
         run: |
           mkdir -p release
-          targets=(
-            "linux amd64"
-            "linux arm64"
-            "windows amd64"
-            "darwin amd64"
-            "darwin arm64"
-          )
-          for target in "${targets[@]}"; do
+          for target in "linux amd64" "linux arm64" "darwin amd64" "darwin arm64"; do
             read -r goos goarch <<< "$target"
-            ext=""
-            [ "$goos" = "windows" ] && ext=".exe"
-            out="show-me-the-story${ext}"
-            echo "Building ${goos}/${goarch}..."
+            out="show-me-the-story"
             GOOS="$goos" GOARCH="$goarch" go build -trimpath -ldflags "-s -w -X main.version=${GITHUB_REF_NAME}" -o "$out" .
             name="show-me-the-story-${GITHUB_REF_NAME}-${goos}-${goarch}"
-            if [ "$goos" = "windows" ]; then
-              zip -q "release/${name}.zip" "$out"
-            else
-              tar -czf "release/${name}.tar.gz" "$out"
-            fi
+            tar -czf "release/${name}.tar.gz" "$out"
             rm -f "$out"
           done
-          ls -lh release/
+      - uses: actions/upload-artifact@v6
+        with:
+          name: web-release-artifacts
+          path: release/*
+          if-no-files-found: error
 
+  windows-gui-artifact:
+    needs: checks
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: false
+      - name: Install Wails v2.15.0
+        shell: pwsh
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.15.0
+      - name: Build Windows GUI
+        shell: pwsh
+        run: |
+          $wails = Join-Path (go env GOPATH) 'bin\wails.exe'
+          & $wails build -platform windows/amd64 -webview2 embed -ldflags "-s -w -X main.version=${{ github.ref_name }}"
+          New-Item -ItemType Directory -Force release | Out-Null
+          $name = "show-me-the-story-${{ github.ref_name }}-windows-amd64.zip"
+          Compress-Archive -Path build/bin/show-me-the-story.exe -DestinationPath "release/$name"
+      - uses: actions/upload-artifact@v6
+        with:
+          name: windows-gui-release-artifact
+          path: release/*
+          if-no-files-found: error
+
+  publish:
+    needs: [web-artifacts, windows-gui-artifact]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: "*-release-artifact*"
+          path: release
+          merge-multiple: true
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "$GITHUB_REF_NAME" release/* \
+            --repo "$GITHUB_REPOSITORY" \
             --title "$GITHUB_REF_NAME" \
             --generate-notes
