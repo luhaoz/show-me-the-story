@@ -181,13 +181,21 @@
     } catch (e) { addToast(e.message, 'error'); }
   }
 
-  async function deleteOutline() {
-    showConfirm($t('outline.toasts.deleteConfirm', { n: chapters.length }), async () => {
+  async function restartOutline() {
+    showConfirm($t('outline.restart.confirm', { n: chapters.length }), async () => {
       try {
-        await api('DELETE', '/api/outline');
-        progress.set(await api('GET', '/api/progress'));
-        addToast($t('outline.toasts.deleted'), 'success');
-      } catch (e) { addToast(e.message, 'error'); }
+        const next = await api('POST', '/api/outline/restart');
+        progress.set(next);
+        replacingBatch = null; submittedBatch = null;
+        continuationCount = 5;
+        planningRequirements = '';
+        endingIntent = 'serial'; endingStyle = 'closed'; endingRequirements = '';
+        addToast($t('outline.restart.done'), 'success');
+        document.getElementById('batch-planning')?.scrollIntoView({ behavior: 'smooth' });
+      } catch (e) {
+        try { progress.set(await api('GET', '/api/progress')); } catch (_) {}
+        addToast(e.message, 'error');
+      }
     });
   }
 
@@ -291,7 +299,10 @@
 <div class="space-y-3">
   <div id="batch-planning" class="card bg-base-200">
     <div class="card-body p-4 gap-3">
-      <h3 class="card-title text-base">{$t(batchActionKey)}</h3>
+      <div class="flex items-center justify-between gap-2 flex-wrap">
+        <h3 class="card-title text-base">{$t(batchActionKey)}</h3>
+        {#if hasOutline}<button class="btn btn-error btn-outline btn-sm" on:click={restartOutline} disabled={$taskRunning}>{$t('outline.restart.button')}</button>{/if}
+      </div>
       <label class="block text-sm" for="batch-count">{$t('outline.batch.count')}</label>
       <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
         <input id="batch-count" type="number" min="1" max="36" step="1" class="input input-sm w-24" bind:value={continuationCount} disabled={batchBlocked} aria-describedby="batch-range" />
@@ -427,9 +438,6 @@
           {/if}
           <button class="btn btn-outline btn-xs" on:click={reviewStory} disabled={$taskRunning || !hasAccepted}>{$t('outline.dynamic.review')}</button>
           <button class="btn btn-outline btn-xs" on:click={() => showRevise = !showRevise} disabled={$taskRunning}>{$t('outline.btn.revise')}</button>
-          {#if !hasAccepted}
-            <button class="btn btn-error btn-outline btn-xs" on:click={deleteOutline} disabled={$taskRunning}>{$t('outline.btn.deleteOutline')}</button>
-          {/if}
         </div>
 
         {#if showRevise}

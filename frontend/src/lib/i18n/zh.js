@@ -1,6 +1,9 @@
 // Chinese UI strings. Add a key here whenever a hardcoded Chinese phrase
 // is replaced with $t('...') in a Svelte component.
 export default {
+ "outline.restart.button": "重新生成大纲",
+ "outline.restart.confirm": "将清空本项目全部 {n} 章的大纲、正文、事实、伏笔进度和校订记录，并从第 1 章重新规划。当前故事配置和人物、世界观设定保留。建议先备份项目。确定继续吗？",
+ "outline.restart.done": "已重置章节，可从第 1 章重新生成大纲",
  "trilium.config.title": "Trilium Notes",
  "trilium.config.help": "配置 ETAPI 后可从笔记读取大纲，并在完稿后发布正文。令牌只保存在本机。",
  "trilium.config.url": "Trilium 地址",

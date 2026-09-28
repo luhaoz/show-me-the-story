@@ -102,6 +102,7 @@ Windows GUI 只负责窗口、静态资源、原生对话框和生命周期；RE
 - 首批和后续批次统一使用 `POST /api/outline/generate-continuation` 与 `OutlineBatchRequest`。
 - 每批需要 `chapter_count`（1–36）和 `outline_synopsis`；可选长期方向与结尾意图。
 - 默认 `append` 接在最大章号后；`replace_last` 只替换末尾完整、全部 pending、无正文的批次，并要求确认。
+- 大纲页「重新生成大纲」使用独立 `POST /api/outline/restart`：任务空闲时确认后将当前项目重置到首批规划，清除所有章节、正文、批次、事实、伏笔进度、校订及导入断点；保留当前故事配置、人物/世界观等设定、书名、长期方向和 Trilium 来源。先保存空进度元数据，再清理孤儿章节文件与导出副本；不得复用仅适合未写批次的 `replace_last`。
 - 预定完结批次之后继续规划需要 `confirm_continue=true`；真正完结仍由用户手动操作。
 - 模型输出必须通过章节数量、连续编号和章纲长度校验；失败不得部分提交内存或磁盘状态。
 - 首批且配置/进度书名都为空时允许模型推断书名；后续批次不得覆盖已有书名。

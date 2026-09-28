@@ -51,6 +51,7 @@ var errorCatalog = map[string]map[string]string{
 	"trilium_source_missing":      {LangZH: "本项目没有关联的 Trilium 大纲笔记", LangEN: "This project has no linked Trilium outline note"},
 	"trilium_server_mismatch":     {LangZH: "当前 Trilium 地址与导入大纲时使用的地址不同", LangEN: "The current Trilium URL differs from the outline source"},
 	"trilium_chapters_incomplete": {LangZH: "所有正文都确认后才能发布到 Trilium", LangEN: "Accept every chapter before publishing to Trilium"},
+	"outline_restart_failed":      {LangZH: "重新开始大纲失败：%v", LangEN: "Failed to restart outline planning: %v"},
 	"shared_card_list_failed":     {LangZH: "读取共享卡库失败：%v", LangEN: "Failed to read the shared card library: %v"},
 	"shared_card_not_found":       {LangZH: "共享卡不存在", LangEN: "Shared card not found"},
 	"shared_card_load_failed":     {LangZH: "共享卡无法加载：%v", LangEN: "Shared card could not be loaded: %v"},

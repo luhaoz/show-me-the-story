@@ -1,5 +1,8 @@
 // English UI strings. Mirror of zh.js. Missing keys fall back to zh.
 export default {
+ "outline.restart.button": "Regenerate outline",
+ "outline.restart.confirm": "Clear all {n} chapters, outlines, prose, facts, foreshadow progress and proofreading, then plan again from Chapter 1? Story configuration and current characters/worldview remain. Back up the project first if needed.",
+ "outline.restart.done": "Chapters reset; generate a new outline from Chapter 1",
  "trilium.config.title": "Trilium Notes",
  "trilium.config.help": "Configure ETAPI to read an outline note and publish finished prose. The token stays on this device.",
  "trilium.config.url": "Trilium URL",

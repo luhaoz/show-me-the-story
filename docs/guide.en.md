@@ -125,10 +125,13 @@ Each batch requires a chapter count (1–36) and synopsis. Long-term direction a
 | Append a batch | You need more chapters | Starts after the highest chapter number and preserves existing batches |
 | Replan this batch | The final complete batch is entirely pending and has no prose | Replaces that batch after confirmation; count and synopsis may change |
 | Edit or revise outlines | Events, pace, or details need adjustment | Does not automatically rewrite existing prose |
+| Regenerate outline | Plan the current project from the beginning and rewrite all prose | Clears every chapter, outline, prose, facts, foreshadow progress and proofreading; chapter numbering starts at 1 |
 | Planning review | Some chapters are already accepted | Uses story context to assess future planning; inspect results and logs |
 | Set ending purpose | This batch should bring the work toward closure | Guides planning and ending behavior but does not formally complete the book |
 
 Do not delete outlines or chapters merely to request wording changes. Once a batch has begun writing, edit relevant outlines or revise prose instead of trying to replace the entire batch.
+
+**Regenerate outline** is in the batch planning card. After confirming, enter a new synopsis and chapter count to generate the first batch and start writing again. The project keeps its story configuration, current characters and worldview, title, long-term direction, and Trilium source link. Details learned from the old draft may remain in those settings; back up the project and edit them if needed. Old chapter files, chapter Markdown copies, import checkpoints, pending configuration changes, and proofreading records are cleared. This cannot be undone. To retain the old draft for comparison, first create a **New prose version** from the project list.
 
 Ending purposes include ongoing serialization, completing the book, and closing this book while leaving sequel space. A closed ending should resolve major outcomes. An open ending should still address the present main plot while deliberately leaving questions open. Custom endings should identify mandatory resolutions and intentional loose ends.
 

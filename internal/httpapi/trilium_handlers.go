@@ -166,7 +166,7 @@ func (h *Handlers) bindTriliumOutline(req *story.OutlineBatchRequest) error {
 	if req.TriliumNoteID == "" {
 		return nil
 	}
-	if len(h.state.Chapters) != 0 || req.Mode == "replace_last" || h.state.TriliumSource != nil {
+	if len(h.state.Chapters) != 0 || req.Mode == "replace_last" {
 		return fmt.Errorf("Trilium source can only be set for the first outline batch")
 	}
 	cfg, err := h.triliumConfig()

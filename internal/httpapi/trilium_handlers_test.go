@@ -96,4 +96,8 @@ func TestTriliumConfigHidesTokenAndSourceBinding(t *testing.T) {
 	if err := h.bindTriliumOutline(&req); err != nil || req.Source == nil || req.Source.Title != "Outline" {
 		t.Fatalf("source binding: %+v %v", req.Source, err)
 	}
+	h.state.TriliumSource = &story.TriliumSource{BaseURL: server.URL, NoteID: "previous123"}
+	if err := h.bindTriliumOutline(&req); err != nil || req.Source.NoteID != "outline123" {
+		t.Fatalf("rebind after restart: %+v %v", req.Source, err)
+	}
 }
