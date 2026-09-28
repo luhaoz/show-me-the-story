@@ -63,7 +63,7 @@ main.go + run_web.go + run_windows.go
 - `internal/agent/`：助理循环、工具解析与执行、危险操作确认。
 - `internal/story/`：大纲、写作、事实与设定、伏笔、导入、Skill、会话、校订等领域逻辑。
 - `internal/llm/`：OpenAI 兼容客户端、流式完整性、重试、token 统计、JSON 提取。
-- `internal/trilium/`：Trilium ETAPI 客户端、全局连接配置、大纲 HTML 转文本及安全的正文 HTML 输出。
+- `internal/trilium/`：Trilium ETAPI 客户端、全局连接配置、大纲 HTML 转文本及安全的正文 HTML 输出；HTML 解析直接依赖 `golang.org/x/net/html`。
 - `internal/config/`：API/项目配置和中英默认提示词。
 - `internal/sse/`、`i18n/`、`prose/`、`fsutil/`、`devlog/`：领域无关基础能力。
 - `frontend/src/`：Svelte 页面、组件、stores、API/SSE/i18n；生产产物仅在 `frontend/dist/`。
