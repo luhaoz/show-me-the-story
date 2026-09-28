@@ -48,6 +48,7 @@ The [first-story walkthrough](docs/guide.en.md#first-story) explains the input, 
 ## Features
 
 - Multiple projects; Chinese and English writing with independently switchable UI language.
+- Create independent prose versions from the same project outline to explore different details.
 - Batch outlines, long-term direction, ending intent, and planning reviews.
 - Characters, worldview, organizations, relationship graphs, and story knowledge.
 - A global shared-card library for saving and reusing API, story, style, character, worldview, organization, or relationship cards individually.

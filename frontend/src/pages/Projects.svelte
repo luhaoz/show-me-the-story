@@ -10,6 +10,9 @@
   let newProjectLang = 'zh';
   let creating = false;
   let backupBusy = false;
+  let rewriteSource = '';
+  let rewriteName = '';
+  let rewriteBusy = false;
   let restoreName = '';
   let restoreFiles;
   let restoreInput;
@@ -124,6 +127,22 @@
     finally { backupBusy = false; }
   }
 
+  async function createRewrite() {
+    const name = rewriteName.trim();
+    if (!rewriteSource || !name || rewriteBusy) return;
+    rewriteBusy = true;
+    try {
+      await api('POST', '/api/projects/' + encodeURIComponent(rewriteSource) + '/rewrite', { name });
+      rewriteSource = '';
+      rewriteName = '';
+      await loadProjects();
+      await selectProject(name);
+      window.location.hash = ($progress?.chapters || []).length ? '#writing' : '#outline';
+      addToast($t('projects.rewrite.done', { name }), 'success');
+    } catch (e) { addToast(e.message, 'error'); }
+    finally { rewriteBusy = false; }
+  }
+
   function handleKeydown(e) {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -190,6 +209,20 @@
       </div>
     </div>
 
+    {#if rewriteSource}
+      <div class="card bg-base-200">
+        <div class="card-body p-4">
+          <h3 class="card-title text-base">{$t('projects.rewrite.title')}</h3>
+          <p class="text-sm text-base-content/65">{$t('projects.rewrite.hint', { name: rewriteSource })}</p>
+          <input class="input w-full" aria-label={$t('projects.rewrite.name')} placeholder={$t('projects.rewrite.name')} bind:value={rewriteName} disabled={rewriteBusy || $taskRunning} />
+          <div class="flex justify-end gap-2">
+            <button class="btn btn-ghost btn-sm" on:click={() => { rewriteSource = ''; rewriteName = ''; }} disabled={rewriteBusy}>{$t('common.cancel')}</button>
+            <button class="btn btn-primary btn-sm" on:click={createRewrite} disabled={rewriteBusy || $taskRunning || !rewriteName.trim()}>{$t('projects.rewrite.create')}</button>
+          </div>
+        </div>
+      </div>
+    {/if}
+
     <!-- Project list -->
     <div class="card bg-base-200">
       <div class="card-body p-4">
@@ -242,6 +275,9 @@
                     {$t('common.delete')}
                   </button>
                 {/if}
+                <button class="btn btn-outline btn-xs shrink-0" on:click|stopPropagation={() => { rewriteSource = p.name; rewriteName = ''; }} disabled={rewriteBusy || $taskRunning || p.compatibility !== 'supported'}>
+                  {$t('projects.rewrite.button')}
+                </button>
                 <button class="btn btn-outline btn-xs shrink-0" on:click|stopPropagation={() => backupProject(p.name)} disabled={backupBusy || $taskRunning || p.compatibility !== 'supported'}>
                   {$t('projects.backup')}
                 </button>

@@ -42,6 +42,7 @@ func NewApplication(apiCfg *config.APIConfig, apiCfgPath string, logger *sse.Log
 	mux.HandleFunc("GET /api/projects", h.GetProjects)
 	mux.HandleFunc("GET /api/projects/{name}/backup", h.GetProjectBackup)
 	mux.HandleFunc("POST /api/projects/restore", h.PostProjectRestore)
+	mux.HandleFunc("POST /api/projects/{name}/rewrite", h.PostProjectRewrite)
 	mux.HandleFunc("POST /api/projects", h.PostProject)
 	mux.HandleFunc("POST /api/projects/continue", h.PostContinuationProject)
 	mux.HandleFunc("GET /api/projects/current", h.GetProjectCurrent)

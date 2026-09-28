@@ -110,6 +110,10 @@ Repeat generation, review, and acceptance. After a small batch, plan the next on
 
 Once results are stable, auto-confirm can continue writing to the end of the current plan. It skips manual acceptance; it does not certify the author’s approval. To correct errors, disable auto-confirm and wait for the active task or stop it before editing.
 
+### Write another version from the same script
+
+In the project list, choose **New prose version** on an existing project and enter a new project name. The new project copies the current story configuration, characters, worldview, batches, and chapter outlines, then starts prose again from the first chapter. The original stays intact. Old prose, summaries, prose-derived facts, chats, and proofreading state do not enter the new version. Foreshadow plans remain, while this version's progress starts over. Current settings may already contain details learned from the old draft; edit them first if those details should change.
+
 <a id="planning"></a>
 ## 3. Batch planning and endings
 

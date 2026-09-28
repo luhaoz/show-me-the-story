@@ -179,6 +179,12 @@ export default {
   'projects.toast.switched': '已切换到项目: {name}',
   'projects.toast.deleted': '项目已删除',
   'projects.toast.needName': '请输入项目名称',
+  'projects.rewrite.button': '创建正文新版本',
+  'projects.rewrite.title': '基于同一大纲创建新版本',
+  'projects.rewrite.hint': '从「{name}」复制当前设定和大纲，清空本版本正文与事实；原项目保持不变。',
+  'projects.rewrite.name': '新版本的项目名称',
+  'projects.rewrite.create': '创建并开始写作',
+  'projects.rewrite.done': '正文新版本「{name}」已创建',
 
   // Toasts (translated from server-side Chinese messages)
   'toast.taskDone': '{name}已完成',

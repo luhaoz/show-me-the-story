@@ -52,6 +52,7 @@ var errorCatalog = map[string]map[string]string{
 	"shared_card_import_failed": {LangZH: "导入共享卡失败：%v", LangEN: "Failed to import shared card: %v"},
 	"backup_failed":             {LangZH: "项目备份失败：%v", LangEN: "Project backup failed: %v"},
 	"restore_failed":            {LangZH: "项目恢复失败：%v", LangEN: "Project restore failed: %v"},
+	"rewrite_failed":            {LangZH: "创建正文新版本失败：%v", LangEN: "Failed to create a new prose version: %v"},
 	"chapter_load_failed":       {LangZH: "第 %d 章文件无法加载，项目未打开。请保留原文件并检查或从备份恢复：%s（%v）", LangEN: "Chapter %d could not be loaded; the project was not opened. Preserve the original file and check it or restore a backup: %s (%v)"},
 	"project_load_failed":       {LangZH: "项目加载或保存恢复失败，项目未打开：%s", LangEN: "Project loading or save recovery failed; the project was not opened: %s"},
 	"setting_has_dependents":    {LangZH: "其他关系或组织仍引用该设定，请先核对并处理依赖", LangEN: "Other relationships or organizations still reference this setting; review those dependencies first"},

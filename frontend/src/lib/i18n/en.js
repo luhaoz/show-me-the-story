@@ -178,6 +178,12 @@ export default {
   'projects.toast.switched': 'Switched to project: {name}',
   'projects.toast.deleted': 'Project deleted',
   'projects.toast.needName': 'Please enter a project name',
+  'projects.rewrite.button': 'New prose version',
+  'projects.rewrite.title': 'Create a version from this outline',
+  'projects.rewrite.hint': 'Copy the current settings and outline from “{name}” and start prose and facts anew. The original project stays intact.',
+  'projects.rewrite.name': 'New version project name',
+  'projects.rewrite.create': 'Create and start writing',
+  'projects.rewrite.done': 'New prose version “{name}” created',
 
   'toast.taskDone': '{name} done',
   'toast.foreshadowReady': '{n} foreshadow suggestions ready — head to the Foreshadows page to confirm',
