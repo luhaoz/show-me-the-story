@@ -22,6 +22,7 @@ const (
 	SharedCardAPI          = "api"
 	SharedCardStory        = "story"
 	SharedCardStyle        = "style"
+	SharedCardPlanning     = "planning"
 	SharedCardCharacter    = "character"
 	SharedCardWorldview    = "worldview"
 	SharedCardOrganization = "organization"
@@ -37,6 +38,13 @@ type SharedStoryCard struct {
 type SharedStyleCard struct {
 	WritingStyle string `json:"writing_style"`
 	WritingPOV   string `json:"writing_pov"`
+}
+
+type SharedPlanningCard struct {
+	LongTermDirection  string `json:"long_term_direction"`
+	EndingIntent       string `json:"ending_intent"`
+	EndingStyle        string `json:"ending_style,omitempty"`
+	EndingRequirements string `json:"ending_requirements,omitempty"`
 }
 
 type SharedCardDependencies struct {
@@ -58,6 +66,7 @@ type SharedCard struct {
 	API            *config.APIConfig      `json:"api,omitempty"`
 	Story          *SharedStoryCard       `json:"story,omitempty"`
 	Style          *SharedStyleCard       `json:"style,omitempty"`
+	Planning       *SharedPlanningCard    `json:"planning,omitempty"`
 	Character      *Character             `json:"character,omitempty"`
 	Worldview      *WorldviewEntry        `json:"worldview,omitempty"`
 	Organization   *Organization          `json:"organization,omitempty"`
@@ -66,17 +75,19 @@ type SharedCard struct {
 }
 
 type SharedCardCaptureRequest struct {
-	Kind        string `json:"kind"`
-	EntityID    string `json:"entity_id,omitempty"`
-	Name        string `json:"name,omitempty"`
-	Description string `json:"description,omitempty"`
+	Kind        string              `json:"kind"`
+	EntityID    string              `json:"entity_id,omitempty"`
+	Name        string              `json:"name,omitempty"`
+	Description string              `json:"description,omitempty"`
+	Planning    *SharedPlanningCard `json:"planning,omitempty"`
 }
 
 type SharedCardImportResult struct {
-	RootID                 string         `json:"root_id,omitempty"`
-	Created                map[string]int `json:"created"`
-	Reused                 map[string]int `json:"reused"`
-	RequiresReconciliation bool           `json:"requires_reconciliation,omitempty"`
+	RootID                 string              `json:"root_id,omitempty"`
+	Created                map[string]int      `json:"created"`
+	Reused                 map[string]int      `json:"reused"`
+	RequiresReconciliation bool                `json:"requires_reconciliation,omitempty"`
+	Planning               *SharedPlanningCard `json:"planning,omitempty"`
 }
 
 func SharedCardsDir(progDir string) string { return filepath.Join(progDir, "shared-cards") }
@@ -142,6 +153,17 @@ func CaptureSharedCard(req SharedCardCaptureRequest, project, language string, a
 		card.Style = &SharedStyleCard{WritingStyle: cfg.Story.WritingStyle, WritingPOV: cfg.Story.WritingPOV}
 		if card.Name == "" {
 			card.Name = "Writing style"
+		}
+	case SharedCardPlanning:
+		if req.Planning == nil {
+			return nil, errors.New("planning card content is required")
+		}
+		card.Planning = ptr(cloneCardValue(*req.Planning))
+		if card.Name == "" {
+			card.Name = truncateSharedCardName(strings.Join(strings.Fields(card.Planning.LongTermDirection), " "), 40)
+			if card.Name == "" {
+				card.Name = "Outline planning"
+			}
 		}
 	case SharedCardCharacter:
 		entity := findCharacter(settings.Characters, req.EntityID)
@@ -210,6 +232,10 @@ func truncateSharedCardName(value string, limit int) string {
 		return value
 	}
 	return string(runes[:limit])
+}
+
+func SharedPlanningSummary(direction string) string {
+	return truncateSharedCardName(strings.TrimSpace(direction), 80)
 }
 
 func captureRelationEndpoint(card *SharedCard, settings *ProjectSettings, kind, id string) error {
@@ -282,7 +308,7 @@ func ValidateSharedCard(card *SharedCard) error {
 		return errors.New("invalid shared card metadata")
 	}
 	payloads := 0
-	for _, present := range []bool{card.API != nil, card.Story != nil, card.Style != nil, card.Character != nil, card.Worldview != nil, card.Organization != nil, card.Relation != nil} {
+	for _, present := range []bool{card.API != nil, card.Story != nil, card.Style != nil, card.Planning != nil, card.Character != nil, card.Worldview != nil, card.Organization != nil, card.Relation != nil} {
 		if present {
 			payloads++
 		}
@@ -290,7 +316,7 @@ func ValidateSharedCard(card *SharedCard) error {
 	if payloads != 1 {
 		return errors.New("shared card must contain exactly one root payload")
 	}
-	validKind := (card.Kind == SharedCardAPI && card.API != nil) || (card.Kind == SharedCardStory && card.Story != nil) || (card.Kind == SharedCardStyle && card.Style != nil) || (card.Kind == SharedCardCharacter && card.Character != nil) || (card.Kind == SharedCardWorldview && card.Worldview != nil) || (card.Kind == SharedCardOrganization && card.Organization != nil) || (card.Kind == SharedCardRelation && card.Relation != nil)
+	validKind := (card.Kind == SharedCardAPI && card.API != nil) || (card.Kind == SharedCardStory && card.Story != nil) || (card.Kind == SharedCardStyle && card.Style != nil) || (card.Kind == SharedCardPlanning && card.Planning != nil) || (card.Kind == SharedCardCharacter && card.Character != nil) || (card.Kind == SharedCardWorldview && card.Worldview != nil) || (card.Kind == SharedCardOrganization && card.Organization != nil) || (card.Kind == SharedCardRelation && card.Relation != nil)
 	if !validKind {
 		return errors.New("shared card kind does not match payload")
 	}
@@ -308,6 +334,12 @@ func ValidateSharedCard(card *SharedCard) error {
 	}
 	if card.Story != nil && card.Story.TargetWordsPerChapter <= 0 {
 		return errors.New("invalid story card")
+	}
+	if card.Planning != nil {
+		p := card.Planning
+		if len([]rune(p.LongTermDirection)) > 20000 || len([]rune(p.EndingRequirements)) > 5000 || (p.EndingIntent != "serial" && p.EndingIntent != "final" && p.EndingIntent != "sequel") || (p.EndingIntent == "serial" && (p.EndingStyle != "" || p.EndingRequirements != "")) || (p.EndingIntent != "serial" && p.EndingStyle != "closed" && p.EndingStyle != "open" && p.EndingStyle != "custom") || (p.EndingStyle == "custom" && strings.TrimSpace(p.EndingRequirements) == "") || (p.EndingStyle != "custom" && p.EndingRequirements != "") || (strings.TrimSpace(p.LongTermDirection) == "" && p.EndingIntent == "serial") {
+			return errors.New("invalid planning card")
+		}
 	}
 	ids, typed := map[string]bool{}, map[string]map[string]bool{SharedCardCharacter: {}, SharedCardWorldview: {}, SharedCardOrganization: {}}
 	add := func(kind, id string) error {
@@ -454,6 +486,8 @@ func ImportSharedCard(card *SharedCard, api *config.APIConfig, cfg *config.Confi
 	case SharedCardStyle:
 		result.RequiresReconciliation = hasAccepted && (nextConfig.Story.WritingStyle != card.Style.WritingStyle || nextConfig.Story.WritingPOV != card.Style.WritingPOV)
 		nextConfig.Story.WritingStyle, nextConfig.Story.WritingPOV = card.Style.WritingStyle, card.Style.WritingPOV
+	case SharedCardPlanning:
+		result.Planning = ptr(cloneCardValue(*card.Planning))
 	case SharedCardCharacter:
 		entity := cloneCardValue(*card.Character)
 		entity.ID = nextSettings.NextCharacterID()

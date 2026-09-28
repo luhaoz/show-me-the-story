@@ -1,5 +1,10 @@
 // English UI strings. Mirror of zh.js. Missing keys fall back to zh.
 export default {
+ "sharedCards.kind.planning": "Planning",
+ "sharedCards.planningSave": "Save direction and ending to library",
+ "sharedCards.planningHelp": "Save the current long-term direction and ending options without the batch synopsis or chapter count",
+ "sharedCards.planningFilled": "Filled the outline form from “{name}”; generate a batch to save it to the project",
+ "sharedCards.planningInvalid": "Enter a long-term direction or a valid ending purpose and requirements",
  "outline.restart.button": "Regenerate outline",
  "outline.restart.confirm": "Clear all {n} chapters, outlines, prose, facts, foreshadow progress and proofreading, then plan again from Chapter 1? Story configuration and current characters/worldview remain. Back up the project first if needed.",
  "outline.restart.done": "Chapters reset; generate a new outline from Chapter 1",

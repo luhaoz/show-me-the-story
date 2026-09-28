@@ -1,6 +1,11 @@
 // Chinese UI strings. Add a key here whenever a hardcoded Chinese phrase
 // is replaced with $t('...') in a Svelte component.
 export default {
+ "sharedCards.kind.planning": "规划",
+ "sharedCards.planningSave": "走向与结尾加入卡片库",
+ "sharedCards.planningHelp": "保存当前长期走向和结尾选项；不会保存本批梗概或章数",
+ "sharedCards.planningFilled": "已将“{name}”填入大纲规划表单，生成章纲后才会保存到项目",
+ "sharedCards.planningInvalid": "请填写长期走向，或选择有效的结尾用途与要求",
  "outline.restart.button": "重新生成大纲",
  "outline.restart.confirm": "将清空本项目全部 {n} 章的大纲、正文、事实、伏笔进度和校订记录，并从第 1 章重新规划。当前故事配置和人物、世界观设定保留。建议先备份项目。确定继续吗？",
  "outline.restart.done": "已重置章节，可从第 1 章重新生成大纲",

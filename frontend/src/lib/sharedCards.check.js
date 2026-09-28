@@ -34,6 +34,9 @@ for (const kind of ['api', 'story', 'style', 'character', 'worldview', 'organiza
   assert.match(configSource, new RegExp(`dropSharedCard\\(event, '${kind}'\\)`), `missing ${kind} drop target`);
   assert.match(configSource, new RegExp(`saveSettingCard\\('${kind}'`), `missing ${kind} add-to-library button`);
 }
+const outlineSource = readFileSync(new URL('../pages/Outline.svelte', import.meta.url), 'utf8');
+assert.match(outlineSource, /saveSettingCard\('planning'/, 'outline must save the planning form as a card');
+assert.match(outlineSource, /planningCardDraft\.subscribe/, 'outline must apply a planning card to the form');
 const drawerSource = readFileSync(new URL('../components/SharedCardLibrary.svelte', import.meta.url), 'utf8');
 assert.match(drawerSource, /readSettingCardDrag/);
 assert.match(drawerSource, /beginSharedCardDrag/);
@@ -43,7 +46,7 @@ const editorSource = readFileSync(new URL('../components/SharedCardEditor.svelte
 for (const field of ['appearance', 'personality', 'background', 'motivation', 'abilities', 'notes']) {
   assert.match(editorSource, new RegExp(`draft\\.character\\.${field}`), `shared character editor missing ${field}`);
 }
-for (const kind of ['worldview', 'organization', 'relation', 'api', 'story', 'style']) {
+for (const kind of ['worldview', 'organization', 'relation', 'api', 'story', 'style', 'planning']) {
   assert.match(editorSource, new RegExp(`draft\\.${kind}`), `shared editor missing ${kind} form`);
 }
 

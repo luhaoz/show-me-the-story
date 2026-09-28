@@ -22,6 +22,11 @@ func sharedCardView(card *story.SharedCard, detail bool) map[string]any {
 	if card.API != nil {
 		view["has_api_key"] = card.API.APIKey != ""
 	}
+	if card.Planning != nil {
+		view["planning_direction"] = story.SharedPlanningSummary(card.Planning.LongTermDirection)
+		view["planning_ending_intent"] = card.Planning.EndingIntent
+		view["planning_ending_style"] = card.Planning.EndingStyle
+	}
 	if !detail {
 		return view
 	}
@@ -92,15 +97,16 @@ func (h *Handlers) PutSharedCard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req struct {
-		Name         string                 `json:"name"`
-		Description  string                 `json:"description"`
-		API          *config.APIConfig      `json:"api"`
-		Story        *story.SharedStoryCard `json:"story"`
-		Style        *story.SharedStyleCard `json:"style"`
-		Character    *story.Character       `json:"character"`
-		Worldview    *story.WorldviewEntry  `json:"worldview"`
-		Organization *story.Organization    `json:"organization"`
-		Relation     *story.Relation        `json:"relation"`
+		Name         string                    `json:"name"`
+		Description  string                    `json:"description"`
+		API          *config.APIConfig         `json:"api"`
+		Story        *story.SharedStoryCard    `json:"story"`
+		Style        *story.SharedStyleCard    `json:"style"`
+		Planning     *story.SharedPlanningCard `json:"planning"`
+		Character    *story.Character          `json:"character"`
+		Worldview    *story.WorldviewEntry     `json:"worldview"`
+		Organization *story.Organization       `json:"organization"`
+		Relation     *story.Relation           `json:"relation"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.writeErrorReq(w, r, http.StatusBadRequest, "invalid_json", err.Error())
@@ -122,6 +128,10 @@ func (h *Handlers) PutSharedCard(w http.ResponseWriter, r *http.Request) {
 	case story.SharedCardStyle:
 		if req.Style != nil {
 			card.Style = req.Style
+		}
+	case story.SharedCardPlanning:
+		if req.Planning != nil {
+			card.Planning = req.Planning
 		}
 	case story.SharedCardCharacter:
 		if req.Character != nil {
@@ -193,6 +203,10 @@ func (h *Handlers) PostSharedCardImport(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	switch card.Kind {
+	case story.SharedCardPlanning:
+		// Planning cards only fill the client's outline form; no project state is written.
+		h.writeJSON(w, http.StatusOK, result)
+		return
 	case story.SharedCardAPI:
 		data, marshalErr := json.MarshalIndent(nextAPI, "", "  ")
 		if marshalErr != nil {

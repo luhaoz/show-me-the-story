@@ -11,6 +11,8 @@ export const currentTaskName = writable(null);
 export const currentProject = writable(null);
 export const projects = writable([]);
 export const sharedCardLibraryOpen = writable(false);
+// A planning card fills the outline form only; it is consumed by Outline.svelte.
+export const planningCardDraft = writable(null);
 
 // Language of the currently loaded novel project (immutable per project).
 // Drives AI prompt language, generated prose language and built-in skill filter.

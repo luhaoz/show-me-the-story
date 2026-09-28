@@ -101,6 +101,36 @@ func TestImportStoryCardMarksTypeChangeForReconciliation(t *testing.T) {
 	}
 }
 
+func TestPlanningCardRoundTripAndFormOnlyImport(t *testing.T) {
+	api := &config.APIConfig{}
+	cfg := config.DefaultConfig()
+	settings := &ProjectSettings{}
+	card, err := CaptureSharedCard(SharedCardCaptureRequest{Kind: SharedCardPlanning, Planning: &SharedPlanningCard{LongTermDirection: "守护王国", EndingIntent: "final", EndingStyle: "custom", EndingRequirements: "揭露真相"}}, "book", "zh", api, cfg, settings)
+	if err != nil {
+		t.Fatal(err)
+	}
+	root := t.TempDir()
+	if err := SaveSharedCard(root, card); err != nil {
+		t.Fatal(err)
+	}
+	loaded, err := LoadSharedCard(root, card.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	state := &Progress{LongTermDirection: "existing", Chapters: []ChapterState{{Num: 1, Status: StatusAccepted, Content: "old prose"}}}
+	_, nextCfg, nextSettings, result, err := ImportSharedCard(loaded, api, cfg, settings, state, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Planning == nil || result.Planning.EndingRequirements != "揭露真相" || state.LongTermDirection != "existing" || len(state.Chapters) != 1 || nextCfg.Story != cfg.Story || len(nextSettings.Characters) != 0 {
+		t.Fatalf("planning import changed project: %+v %+v", result, state)
+	}
+	loaded.Planning.EndingRequirements = ""
+	if err := ValidateSharedCard(loaded); err == nil {
+		t.Fatal("invalid custom ending was accepted")
+	}
+}
+
 func TestSharedCardStorageSkipsInvalidFiles(t *testing.T) {
 	card, _, _, _ := sharedCardFixture(t, SharedCardCharacter, "c_1")
 	dir := t.TempDir()

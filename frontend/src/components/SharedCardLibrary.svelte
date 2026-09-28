@@ -70,6 +70,7 @@
     if (card.kind === 'api') return 'API';
     if (card.kind === 'story') return '文';
     if (card.kind === 'style') return '✦';
+    if (card.kind === 'planning') return '⌁';
     if (card.kind === 'relation') return '↔';
     return (card.name || '?').trim().slice(0, 1).toUpperCase();
   }
@@ -103,6 +104,7 @@
               <span class="badge badge-outline badge-xs shrink-0">{$t('sharedCards.kind.' + card.kind)}</span>
             </div>
             {#if card.description}<p class="text-xs text-base-content/65 line-clamp-2 mt-0.5">{card.description}</p>{/if}
+            {#if card.kind === 'planning'}<p class="text-xs text-base-content/65 line-clamp-2 mt-0.5">{$t('ending.' + card.planning_ending_intent)}{#if card.planning_ending_style && card.planning_ending_intent !== 'serial'} · {$t('ending.' + card.planning_ending_style)}{/if}{#if card.planning_direction} · {card.planning_direction}{/if}</p>{/if}
             <div class="flex flex-wrap items-center gap-1 mt-1 text-xs text-base-content/50">
               <span class="truncate max-w-full">{card.source_project || '—'}{dependencyText(card) ? ' · ' + dependencyText(card) : ''}</span>
               {#if card.source_language}<span class="badge badge-outline badge-xs uppercase">{card.source_language}</span>{/if}

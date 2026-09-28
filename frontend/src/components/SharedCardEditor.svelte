@@ -28,6 +28,7 @@
     loadedID = value.card.id;
     draft = JSON.parse(JSON.stringify(value.card));
     if (draft.api) draft.api.api_key = '';
+    if (draft.planning && !draft.planning.ending_style) draft.planning.ending_style = 'closed';
     if (draft.organization) draft.organization.members ||= [];
     if (draft.relation) {
       relationSource = `${draft.relation.source_type}:${draft.relation.source_id}`;
@@ -60,6 +61,14 @@
     if (draft.story && Number(draft.story.target_words_per_chapter) <= 0) {
       addToast($t('sharedCards.targetWordsInvalid'), 'error');
       return;
+    }
+    if (draft.planning && ((!draft.planning.long_term_direction?.trim() && draft.planning.ending_intent === 'serial') || (draft.planning.ending_intent !== 'serial' && draft.planning.ending_style === 'custom' && !draft.planning.ending_requirements?.trim()))) {
+      addToast($t('sharedCards.planningInvalid'), 'error');
+      return;
+    }
+    if (draft.planning) {
+      if (draft.planning.ending_intent === 'serial') draft.planning.ending_style = '';
+      if (draft.planning.ending_style !== 'custom') draft.planning.ending_requirements = '';
     }
     if (draft.relation) {
       if (!relationSource || !relationTarget) {
@@ -186,6 +195,15 @@
               <div class="space-y-2">
                 <div><span class="text-xs text-base-content/65 mb-0.5 block">{$t('config.style.label')}</span><textarea class="textarea w-full h-28 text-base" bind:value={draft.style.writing_style}></textarea></div>
                 <div><span class="text-xs text-base-content/65 mb-0.5 block">{$t('config.pov.label')}</span><textarea class="textarea w-full h-20 text-base" bind:value={draft.style.writing_pov}></textarea></div>
+              </div>
+            {:else if draft.planning}
+              <div class="space-y-2">
+                <div><span class="text-xs text-base-content/65 mb-0.5 block">{$t('ending.direction')}</span><textarea class="textarea textarea-sm w-full h-24 text-sm" bind:value={draft.planning.long_term_direction}></textarea></div>
+                <div><span class="text-xs text-base-content/65 mb-0.5 block">{$t('ending.intent')}</span><select class="select select-sm w-full" bind:value={draft.planning.ending_intent}><option value="serial">{$t('ending.serial')}</option><option value="final">{$t('ending.final')}</option><option value="sequel">{$t('ending.sequel')}</option></select></div>
+                {#if draft.planning.ending_intent !== 'serial'}
+                  <div><span class="text-xs text-base-content/65 mb-0.5 block">{$t('ending.style')}</span><select class="select select-sm w-full" bind:value={draft.planning.ending_style}><option value="closed">{$t('ending.closed')}</option><option value="open">{$t('ending.open')}</option><option value="custom">{$t('ending.custom')}</option></select></div>
+                  {#if draft.planning.ending_style === 'custom'}<div><span class="text-xs text-base-content/65 mb-0.5 block">{$t('ending.requirements')}</span><textarea class="textarea textarea-sm w-full h-24 text-sm" bind:value={draft.planning.ending_requirements}></textarea></div>{/if}
+                {/if}
               </div>
             {/if}
           </div>

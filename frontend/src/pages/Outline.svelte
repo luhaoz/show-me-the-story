@@ -1,9 +1,10 @@
 <script>
   import { api } from '../lib/api.js';
-  import { progress, config, streamingContent, streamingChapterIdx, taskRunning, addToast, showConfirm, outlineCharacterSuggestions, outlineCharacterShowSuggestions, settings } from '../lib/stores.js';
+  import { progress, config, streamingContent, streamingChapterIdx, taskRunning, addToast, showConfirm, outlineCharacterSuggestions, outlineCharacterShowSuggestions, settings, planningCardDraft } from '../lib/stores.js';
   import { t } from '../lib/i18n/index.js';
   import { onMount, tick } from 'svelte';
   import ConfigChangePanel from '../components/ConfigChangePanel.svelte';
+  import { saveSettingCard } from '../lib/sharedCards.js';
 
   const OUTLINE_FOCUS_KEY = 'showmethestory.outlineFocusChapter';
 
@@ -103,6 +104,24 @@
   let endingRequirements = '';
   let directionLoaded = false;
   $: if (p && !directionLoaded) { longTermDirection = p.long_term_direction || ''; directionLoaded = true; }
+  onMount(() => planningCardDraft.subscribe(card => {
+    if (!card) return;
+    longTermDirection = card.long_term_direction || '';
+    directionLoaded = true;
+    endingIntent = card.ending_intent || 'serial';
+    endingStyle = card.ending_style || 'closed';
+    endingRequirements = card.ending_style === 'custom' ? (card.ending_requirements || '') : '';
+    planningCardDraft.set(null);
+    document.getElementById('batch-planning')?.scrollIntoView({ behavior: 'smooth' });
+  }));
+  async function savePlanningCard() {
+    await saveSettingCard('planning', '', $t, { planning: {
+      long_term_direction: longTermDirection.trim(),
+      ending_intent: endingIntent,
+      ending_style: endingIntent === 'serial' ? '' : endingStyle,
+      ending_requirements: endingIntent !== 'serial' && endingStyle === 'custom' ? endingRequirements.trim() : '',
+    } });
+  }
   let replacingBatch = null;
   let submittedBatch = null;
   $: batches = p?.outline_batches || [];
@@ -344,6 +363,7 @@
       {/if}
       <div class="flex justify-end gap-2">
         {#if replacingBatch}<button class="btn btn-ghost btn-sm" disabled={$taskRunning} on:click={() => { replacingBatch = null; planningRequirements = ''; }}>{$t('common.cancel')}</button>{/if}
+        <button class="btn btn-outline btn-sm" on:click={savePlanningCard} disabled={$taskRunning || (!longTermDirection.trim() && endingIntent === 'serial') || (endingIntent !== 'serial' && endingStyle === 'custom' && !endingRequirements.trim())} title={$t('sharedCards.planningHelp')}>{$t('sharedCards.planningSave')}</button>
         <button class="btn btn-primary btn-sm" on:click={generateContinuation} disabled={batchBlocked || !validCount || !planningRequirements.trim() || (endingIntent !== 'serial' && endingStyle === 'custom' && !endingRequirements.trim())}>{$t(batchActionKey)}</button>
       </div>
     </div>

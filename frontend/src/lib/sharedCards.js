@@ -1,6 +1,6 @@
 import { api } from './api.js';
 import { get } from 'svelte/store';
-import { apiConfig, config, settings, projectLanguage, addToast, showConfirm } from './stores.js';
+import { apiConfig, config, settings, projectLanguage, planningCardDraft, sharedCardLibraryOpen, addToast, showConfirm } from './stores.js';
 
 export const SETTING_CARD_MIME = 'application/x-story-setting-card';
 export const SHARED_CARD_MIME = 'application/x-shared-story-card';
@@ -25,9 +25,9 @@ export function readSharedCardDrag(event) {
   try { return JSON.parse(event.dataTransfer.getData(SHARED_CARD_MIME)); } catch { return null; }
 }
 
-export async function saveSettingCard(kind, entityId, translate) {
+export async function saveSettingCard(kind, entityId, translate, fields = {}) {
   try {
-    await api('POST', '/api/shared-cards', { kind, entity_id: entityId || '' });
+    await api('POST', '/api/shared-cards', { kind, entity_id: entityId || '', ...fields });
     addToast(translate('sharedCards.saved'), 'success');
     if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('shared-card-library-changed'));
     return true;
@@ -51,6 +51,13 @@ export async function importSharedCard(card, translate, confirmWritten = false, 
   }
   try {
     const result = await api('POST', `/api/shared-cards/${card.id}/import`, { confirm_written: confirmWritten });
+    if (result.planning) {
+      planningCardDraft.set(result.planning);
+      sharedCardLibraryOpen.set(false);
+      window.location.hash = '#outline';
+      addToast(translate('sharedCards.planningFilled', { name: card.name }), 'success');
+      return true;
+    }
     await refreshConfigurationStores();
     addToast(translate('sharedCards.imported', { name: card.name }), 'success');
     if (result.requires_reconciliation) {
