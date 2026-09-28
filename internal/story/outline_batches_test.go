@@ -79,6 +79,21 @@ func TestFirstOutlineBatchFillsEmptyTitle(t *testing.T) {
 	}
 }
 
+func TestFirstOutlineBatchPersistsTriliumSourceAfterSuccess(t *testing.T) {
+	cfg := config.DefaultConfigForLang("zh")
+	state := &Progress{}
+	api := batchAPI(t, func(string) string { return batchAnswer(1, 1) })
+	path := filepath.Join(t.TempDir(), "progress.json")
+	source := &TriliumSource{BaseURL: "http://trilium.local", NoteID: "outline123", Title: "Outline"}
+	if err := GenerateOutlineBatch(context.Background(), api, cfg, state, nil, OutlineBatchRequest{ChapterCount: 1, Synopsis: "Plot", Source: source}, path, sse.NewLogBroadcaster()); err != nil {
+		t.Fatal(err)
+	}
+	loaded, err := LoadProgress(path)
+	if err != nil || loaded.TriliumSource == nil || *loaded.TriliumSource != *source {
+		t.Fatalf("source not persisted: %+v, %v", loaded.TriliumSource, err)
+	}
+}
+
 func TestOutlineBatchAppendReplaceAndRoundTrip(t *testing.T) {
 	for _, lang := range []string{"zh", "en"} {
 		t.Run(lang, func(t *testing.T) {

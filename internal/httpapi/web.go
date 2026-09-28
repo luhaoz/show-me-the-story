@@ -56,6 +56,11 @@ func NewApplication(apiCfg *config.APIConfig, apiCfgPath string, logger *sse.Log
 	mux.HandleFunc("GET /api/config/api", h.GetAPIConfig)
 	mux.HandleFunc("PUT /api/config/api", h.PutAPIConfig)
 	mux.HandleFunc("POST /api/config/api/test", h.PostAPITest)
+	mux.HandleFunc("GET /api/config/trilium", h.GetTriliumConfig)
+	mux.HandleFunc("PUT /api/config/trilium", h.PutTriliumConfig)
+	mux.HandleFunc("POST /api/config/trilium/test", h.PostTriliumTest)
+	mux.HandleFunc("POST /api/trilium/outline/read", h.PostTriliumOutlineRead)
+	mux.HandleFunc("POST /api/trilium/publish", h.PostTriliumPublish)
 
 	// Global shared setting-card library.
 	mux.HandleFunc("GET /api/shared-cards", h.GetSharedCards)

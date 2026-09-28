@@ -23,15 +23,17 @@ type OutlineBatch struct {
 }
 
 type OutlineBatchRequest struct {
-	ChapterCount       int    `json:"chapter_count"`
-	Synopsis           string `json:"outline_synopsis"`
-	LongTermDirection  string `json:"long_term_direction"`
-	Mode               string `json:"mode"`
-	BatchID            int    `json:"batch_id"`
-	EndingIntent       string `json:"ending_intent"`
-	EndingStyle        string `json:"ending_style"`
-	EndingRequirements string `json:"ending_requirements"`
-	ConfirmContinue    bool   `json:"confirm_continue"`
+	TriliumNoteID      string         `json:"trilium_note_id,omitempty"`
+	Source             *TriliumSource `json:"-"`
+	ChapterCount       int            `json:"chapter_count"`
+	Synopsis           string         `json:"outline_synopsis"`
+	LongTermDirection  string         `json:"long_term_direction"`
+	Mode               string         `json:"mode"`
+	BatchID            int            `json:"batch_id"`
+	EndingIntent       string         `json:"ending_intent"`
+	EndingStyle        string         `json:"ending_style"`
+	EndingRequirements string         `json:"ending_requirements"`
+	ConfirmContinue    bool           `json:"confirm_continue"`
 }
 
 // ValidateOutlineBatch never mutates the project. Call again inside the task.
@@ -171,6 +173,10 @@ func GenerateOutlineBatch(ctx context.Context, apiCfg *config.APIConfig, cfg *co
 		next.Title = generatedTitle
 	}
 	next.LongTermDirection = strings.TrimSpace(req.LongTermDirection)
+	if start == 1 && req.Source != nil {
+		source := *req.Source
+		next.TriliumSource = &source
+	}
 	next.Phase = "writing"
 	next.BookStatus = BookStatusActive
 	if err := SaveProgress(path, &next); err != nil {

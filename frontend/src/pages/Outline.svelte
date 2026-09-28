@@ -82,6 +82,21 @@
   let importStatus = null;  // {active,total,cursor} 断点状态
   let continuationCount = 5;
   let planningRequirements = "";
+  let triliumNoteID = '';
+  let triliumNoteTitle = '';
+  let readingTrilium = false;
+  async function readTriliumOutline() {
+    if (!triliumNoteID.trim() || readingTrilium) return;
+    readingTrilium = true;
+    try {
+      const note = await api('POST', '/api/trilium/outline/read', { note_id: triliumNoteID.trim() });
+      triliumNoteID = note.note_id;
+      triliumNoteTitle = note.title;
+      planningRequirements = note.synopsis;
+      addToast($t('trilium.outline.loaded'), 'success');
+    } catch (e) { addToast(e.message, 'error'); }
+    finally { readingTrilium = false; }
+  }
   let longTermDirection = "";
   let endingIntent = 'serial';
   let endingStyle = 'closed';
@@ -180,6 +195,7 @@
     if (!planningRequirements.trim() || !validCount || batchBlocked) return;
     if (endingIntent !== 'serial' && endingStyle === 'custom' && !endingRequirements.trim()) return;
     const body = { chapter_count: Number(continuationCount), outline_synopsis: planningRequirements.trim(), long_term_direction: longTermDirection.trim(), mode: replacingBatch ? 'replace_last' : 'append', batch_id: replacingBatch?.id || 0 };
+    if (!hasOutline && triliumNoteTitle) body.trilium_note_id = triliumNoteID;
     Object.assign(body, { ending_intent: endingIntent, ending_style: endingIntent === 'serial' ? '' : endingStyle, ending_requirements: endingRequirements.trim() });
     const submitted = { revision: replacingBatch ? (replacingBatch.revision || 0) + 1 : 1, start: batchStart, end: batchStart + body.chapter_count - 1, synopsis: body.outline_synopsis };
     const run = async () => {
@@ -289,6 +305,15 @@
         </p>
       </div>
       <label class="block text-sm" for="batch-synopsis">{$t('outline.batch.synopsis')}</label>
+      {#if !hasOutline}
+        <div class="flex flex-wrap gap-2 items-end">
+          <label class="flex-1 min-w-48 text-sm" for="trilium-note-id">{$t('trilium.outline.noteID')}
+            <input id="trilium-note-id" class="input input-sm w-full mt-1" bind:value={triliumNoteID} on:input={() => triliumNoteTitle = ''} disabled={batchBlocked || readingTrilium} />
+          </label>
+          <button class="btn btn-outline btn-sm" on:click={readTriliumOutline} disabled={batchBlocked || readingTrilium || !triliumNoteID.trim()}>{$t('trilium.outline.read')}</button>
+        </div>
+        {#if triliumNoteTitle}<p class="text-sm text-base-content/70">{$t('trilium.outline.source', { title: triliumNoteTitle })}</p>{/if}
+      {/if}
       <textarea id="batch-synopsis" class="textarea w-full h-36" bind:value={planningRequirements} placeholder={$t('outline.batch.placeholder')} disabled={batchBlocked}></textarea>
       <label class="block text-sm" for="batch-direction">{$t('ending.direction')}</label>
       <p class="text-xs text-base-content/70">{$t('ending.directionHelp')}</p>

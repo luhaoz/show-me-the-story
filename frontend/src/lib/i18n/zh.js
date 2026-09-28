@@ -1,6 +1,21 @@
 // Chinese UI strings. Add a key here whenever a hardcoded Chinese phrase
 // is replaced with $t('...') in a Svelte component.
 export default {
+ "trilium.config.title": "Trilium Notes",
+ "trilium.config.help": "配置 ETAPI 后可从笔记读取大纲，并在完稿后发布正文。令牌只保存在本机。",
+ "trilium.config.url": "Trilium 地址",
+ "trilium.config.token": "ETAPI 令牌",
+ "trilium.config.keepToken": "留空则保留原令牌",
+ "trilium.config.test": "测试连接",
+ "trilium.saved": "Trilium 配置已保存",
+ "trilium.connected": "Trilium 连接成功",
+ "trilium.outline.noteID": "大纲笔记 ID",
+ "trilium.outline.read": "读取大纲笔记",
+ "trilium.outline.loaded": "已填入大纲梗概，可编辑后生成章节",
+ "trilium.outline.source": "来源：{title}",
+ "trilium.publish.button": "发布到 Trilium",
+ "trilium.publish.help": "所有章节确认后，将全文作为来源大纲的一个新子笔记发布",
+ "trilium.publish.done": "已发布：{title}",
  "task.knowledge_sync": "同步事实与设定",
  "task.planning_review": "规划复盘",
  "task.proofread_analyze": "完稿分析",

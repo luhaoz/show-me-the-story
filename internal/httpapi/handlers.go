@@ -1932,6 +1932,11 @@ func (h *Handlers) PostOutlineGenerateContinuation(w http.ResponseWriter, r *htt
 		h.writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 		return
 	}
+	if err := h.bindTriliumOutline(&body); err != nil {
+		h.endTask()
+		h.writeErrorReq(w, r, http.StatusBadRequest, "trilium_request_failed", err)
+		return
+	}
 
 	go func() {
 		defer h.endTask()

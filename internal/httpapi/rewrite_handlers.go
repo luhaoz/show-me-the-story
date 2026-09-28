@@ -22,6 +22,7 @@ func rewriteProgress(source *story.Progress) *story.Progress {
 		CorePrompt:          source.CorePrompt,
 		LongTermDirection:   source.LongTermDirection,
 		StoryConfigSnapshot: source.StoryConfigSnapshot,
+		TriliumSource:       source.TriliumSource,
 		NextMemoryID:        source.NextMemoryID,
 		OutlineBatches:      append([]story.OutlineBatch(nil), source.OutlineBatches...),
 	}

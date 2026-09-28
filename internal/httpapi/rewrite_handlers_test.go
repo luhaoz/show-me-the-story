@@ -29,6 +29,7 @@ func TestProjectRewriteStartsNewProseWithoutChangingSource(t *testing.T) {
 	}
 	before := &story.Progress{
 		Phase: "writing", BookStatus: story.BookStatusCompleted, Title: "The Script", CurrentChapterIndex: 1,
+		TriliumSource:  &story.TriliumSource{BaseURL: "http://trilium.local", NoteID: "outline123", Title: "Outline"},
 		OutlineBatches: []story.OutlineBatch{{ID: 1, StartCh: 1, EndCh: 1, Synopsis: "script", PlannedFinal: true}},
 		Chapters:       []story.ChapterState{{Num: 1, Title: "Opening", Outline: "outline", Content: "old prose", Summary: "old summary", Status: story.StatusAccepted, KnowledgeTracked: true}},
 		MemoryEntries:  []story.MemoryEntry{{ID: 1, Content: "old prose fact"}},
@@ -52,6 +53,9 @@ func TestProjectRewriteStartsNewProseWithoutChangingSource(t *testing.T) {
 	}
 	if got.Phase != "writing" || got.BookStatus != story.BookStatusActive || got.CurrentChapterIndex != 0 || len(got.Chapters) != 1 || got.Chapters[0].Status != story.StatusPending || got.Chapters[0].Content != "" || got.Chapters[0].Summary != "" || got.Chapters[0].Outline != "outline" || got.Chapters[0].KnowledgeTracked || len(got.MemoryEntries) != 0 {
 		t.Fatalf("unexpected new prose state: %+v", got)
+	}
+	if got.TriliumSource == nil || got.TriliumSource.NoteID != "outline123" {
+		t.Fatalf("Trilium source was not retained: %+v", got.TriliumSource)
 	}
 	if !got.OutlineBatches[0].PlannedFinal || got.Foreshadows[0].Status != story.ForeshadowPlanted || len(got.Foreshadows[0].Events) != 0 || got.Foreshadows[0].Resolution != "" {
 		t.Fatalf("planning was not reset correctly: %+v", got)

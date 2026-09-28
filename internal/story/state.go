@@ -105,6 +105,7 @@ type MemoryEntry struct {
 }
 
 type Progress struct {
+	TriliumSource               *TriliumSource           `json:"trilium_source,omitempty"`
 	NextMemoryID                int                      `json:"next_memory_id,omitempty"`
 	OutlineBatches              []OutlineBatch           `json:"outline_batches,omitempty"`
 	Phase                       string                   `json:"phase"`
@@ -123,6 +124,12 @@ type Progress struct {
 	LongTermDirection           string                   `json:"long_term_direction,omitempty"`
 	LatestPlanningReview        *PlanningReview          `json:"latest_planning_review,omitempty"`
 	NarrativeCheckpoints        []NarrativeCheckpoint    `json:"narrative_checkpoints,omitempty"`
+}
+
+type TriliumSource struct {
+	BaseURL string `json:"base_url"`
+	NoteID  string `json:"note_id"`
+	Title   string `json:"title"`
 }
 
 const (

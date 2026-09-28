@@ -100,6 +100,15 @@
   $: total = projectChapters.length;
   $: accepted = projectChapters.filter(c => c.status === 'accepted').length;
   $: pct = total > 0 ? Math.round(accepted / total * 100) : 0;
+  let publishingTrilium = false;
+  async function publishTrilium() {
+    publishingTrilium = true;
+    try {
+      const result = await api('POST', '/api/trilium/publish');
+      addToast($t('trilium.publish.done', { title: result.title }), 'success');
+    } catch (e) { addToast(e.message, 'error'); }
+    finally { publishingTrilium = false; }
+  }
   $: currentIdx = p?.current_chapter_index ?? 0;
 
   // 默认选中当前章节
@@ -514,6 +523,9 @@
             <button class="btn btn-outline btn-xs" on:click={smoothTransitions} disabled={$taskRunning} title={$t('writing.btn.smoothTransitions.tip')}>{$t('writing.btn.smoothTransitions')}</button>
           {/if}
           <button class="btn btn-outline btn-xs" on:click={exportBook}>{$t('writing.btn.exportTxt')}</button>
+          {#if p.trilium_source}
+            <button class="btn btn-outline btn-xs" on:click={publishTrilium} disabled={$taskRunning || publishingTrilium || total === 0 || accepted !== total} title={$t('trilium.publish.help')}>{$t('trilium.publish.button')}</button>
+          {/if}
 			{#if p.book_status === 'completed'}
 				<button class="btn btn-warning btn-xs" on:click={() => setBookCompleted(false)} disabled={$taskRunning}>{$t('writing.book.resume')}</button>
 			{:else}

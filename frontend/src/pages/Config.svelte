@@ -5,6 +5,7 @@
   import { t } from '../lib/i18n/index.js';
   import { resolveChatCompletionsURL } from '../lib/apiUrl.js';
   import ConfigChangePanel from '../components/ConfigChangePanel.svelte';
+  import TriliumConfig from '../components/TriliumConfig.svelte';
   import { beginSettingCardDrag, readSharedCardDrag, importSharedCard, saveSettingCard } from '../lib/sharedCards.js';
 
   export let sendToChat = async () => {};
@@ -459,6 +460,7 @@
 
 <div class="space-y-3">
   <ConfigChangePanel />
+  <TriliumConfig />
   <!-- API + Story Config: side by side -->
   <div class="grid grid-cols-1 @3xl:grid-cols-2 gap-4">
     <div class="card bg-base-200" role="region" aria-label={$t('config.api.title')} on:dragover|preventDefault on:drop={(event) => dropSharedCard(event, 'api')}>
