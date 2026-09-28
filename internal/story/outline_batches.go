@@ -173,7 +173,7 @@ func GenerateOutlineBatch(ctx context.Context, apiCfg *config.APIConfig, cfg *co
 		next.Title = generatedTitle
 	}
 	next.LongTermDirection = strings.TrimSpace(req.LongTermDirection)
-	if start == 1 && req.Source != nil {
+	if req.Source != nil {
 		source := *req.Source
 		next.TriliumSource = &source
 	}

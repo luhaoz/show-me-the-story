@@ -79,7 +79,7 @@ func TestFirstOutlineBatchFillsEmptyTitle(t *testing.T) {
 	}
 }
 
-func TestFirstOutlineBatchPersistsTriliumSourceAfterSuccess(t *testing.T) {
+func TestOutlineBatchesPersistLatestTriliumSourceAfterSuccess(t *testing.T) {
 	cfg := config.DefaultConfigForLang("zh")
 	state := &Progress{}
 	api := batchAPI(t, func(string) string { return batchAnswer(1, 1) })
@@ -91,6 +91,15 @@ func TestFirstOutlineBatchPersistsTriliumSourceAfterSuccess(t *testing.T) {
 	loaded, err := LoadProgress(path)
 	if err != nil || loaded.TriliumSource == nil || *loaded.TriliumSource != *source {
 		t.Fatalf("source not persisted: %+v, %v", loaded.TriliumSource, err)
+	}
+	nextSource := &TriliumSource{BaseURL: "http://trilium.local", NoteID: "another123", Title: "Another outline"}
+	api = batchAPI(t, func(string) string { return batchAnswer(2, 1) })
+	if err := GenerateOutlineBatch(context.Background(), api, cfg, state, nil, OutlineBatchRequest{ChapterCount: 1, Synopsis: "Next plot", Source: nextSource}, path, sse.NewLogBroadcaster()); err != nil {
+		t.Fatal(err)
+	}
+	loaded, err = LoadProgress(path)
+	if err != nil || loaded.TriliumSource == nil || *loaded.TriliumSource != *nextSource {
+		t.Fatalf("later batch did not update source: %+v, %v", loaded.TriliumSource, err)
 	}
 }
 

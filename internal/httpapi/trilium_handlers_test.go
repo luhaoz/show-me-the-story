@@ -28,6 +28,9 @@ func TestTriliumPublishCreatesNewChildAndRequiresAcceptedChapters(t *testing.T) 
 		if body.ParentNoteID != "outline123" || body.Type != "text" || !strings.Contains(body.Content, "<h2>第 1 章") || strings.Contains(body.Content, "Inherited") {
 			t.Errorf("bad child: %+v", body)
 		}
+		if created == 1 && !strings.Contains(body.Content, "Proofread body") {
+			t.Errorf("second publication did not use current prose: %+v", body)
+		}
 		created++
 		w.Write([]byte(`{"note":{"noteId":"created123"}}`))
 	}))
@@ -51,6 +54,9 @@ func TestTriliumPublishCreatesNewChildAndRequiresAcceptedChapters(t *testing.T) 
 	}
 	h.state.Chapters[1].Status = story.StatusAccepted
 	for i := 0; i < 2; i++ {
+		if i == 1 {
+			h.state.Chapters[1].Content = "Proofread body"
+		}
 		if w := call(); w.Code != http.StatusCreated {
 			t.Fatalf("publication %d: %d %s", i, w.Code, w.Body.String())
 		}
@@ -99,5 +105,10 @@ func TestTriliumConfigHidesTokenAndSourceBinding(t *testing.T) {
 	h.state.TriliumSource = &story.TriliumSource{BaseURL: server.URL, NoteID: "previous123"}
 	if err := h.bindTriliumOutline(&req); err != nil || req.Source.NoteID != "outline123" {
 		t.Fatalf("rebind after restart: %+v %v", req.Source, err)
+	}
+	h.state.Chapters = []story.ChapterState{{Num: 1, Status: story.StatusAccepted}}
+	req.Mode = "append"
+	if err := h.bindTriliumOutline(&req); err != nil || req.Source.NoteID != "outline123" {
+		t.Fatalf("later batch source binding: %+v %v", req.Source, err)
 	}
 }

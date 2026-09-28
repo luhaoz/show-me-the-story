@@ -161,13 +161,10 @@ func (h *Handlers) PostTriliumPublish(w http.ResponseWriter, r *http.Request) {
 	h.writeJSON(w, http.StatusCreated, map[string]string{"note_id": id, "title": title})
 }
 
-// Bind the source only after a successful first outline batch has been saved.
+// Bind the source only after a successful outline batch has been saved.
 func (h *Handlers) bindTriliumOutline(req *story.OutlineBatchRequest) error {
 	if req.TriliumNoteID == "" {
 		return nil
-	}
-	if len(h.state.Chapters) != 0 || req.Mode == "replace_last" {
-		return fmt.Errorf("Trilium source can only be set for the first outline batch")
 	}
 	cfg, err := h.triliumConfig()
 	if err != nil {

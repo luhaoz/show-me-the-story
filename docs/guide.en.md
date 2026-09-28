@@ -144,9 +144,9 @@ After the planned ending, accept the chapters, check foreshadowing, and mark the
 
 Create a `text` outline note in Trilium and copy its note ID. In Configuration → Trilium Notes, enter the HTTP server URL and ETAPI token, save, and test the connection. The token is stored locally in `trilium.json` alongside the application data; it is excluded from project backups and configuration responses.
 
-For the first outline batch of a new project, enter the note ID in Outline and click **Read outline note**. Its text fills the synopsis form, where you can edit it and choose a chapter count. The source note is linked to the project only after that first batch is saved successfully. Later batches use the normal synopsis flow. Creating a new prose version retains the source link.
+Enter a note ID above the batch synopsis in Outline and click **Read outline note**. Its text fills the synopsis form, where you can edit it and choose a chapter count. This works for initial and later batches. The source note is linked or updated only after a batch using it saves successfully; it becomes the parent for future prose exports. Reading alone does not change saved outlines or prose. Creating a new prose version retains the source link.
 
-Once every chapter in this version is accepted, click **Publish to Trilium** in Writing. The app creates one new text note directly under the source outline, containing the chapters in order with headings. Each click creates another child note; inherited prequel chapters are excluded. After a timeout or network error, check Trilium for an existing child before retrying. Restore the original Trilium server URL if you switch servers.
+Once every chapter in this version is accepted, click **Export to Trilium child note** in Writing or after entering Proofreading. The app creates one new text note directly under the linked outline, containing the current prose in chapter order with headings. Exporting from Proofreading uses the current proofread prose. Each click creates another child note; inherited prequel chapters are excluded. After a timeout or network error, check Trilium for an existing child before retrying. Restore the source Trilium server URL if you switch servers.
 
 <a id="revision"></a>
 ## 4. Review, editing, and revision

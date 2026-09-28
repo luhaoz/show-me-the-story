@@ -11,6 +11,16 @@
   let preferences = '', selectedStatus = 'all', selectedCategory = 'all';
   let chapter = null, highlighted = 0, selectedBlock = 0, editing = 0, editText = '', insertAfter = 0, insertText = '';
   let continuationName = '';
+  let publishingTrilium = false;
+
+  async function publishTrilium() {
+    publishingTrilium = true;
+    try {
+      const result = await api('POST', '/api/trilium/publish');
+      addToast($t('trilium.publish.done', { title: result.title }), 'success');
+    } catch (e) { addToast(e.message, 'error'); }
+    finally { publishingTrilium = false; }
+  }
 
   async function load() {
     try { const value = await api('GET', '/api/proofread'); postprocess.set({ book_complete: complete, state: value }); preferences = value.author_requirements || ''; }
@@ -68,7 +78,8 @@
 {:else}
   <div class="space-y-3">
     <div class="card bg-base-200"><div class="card-body p-4 gap-3">
-      <div class="flex gap-2 items-center flex-wrap"><h2 class="card-title flex-1">{$t('proofread.title')}</h2><button class="btn btn-outline btn-sm" on:click={()=>download('/api/export/txt',()=>{})}>{$t('proofread.downloadBook')}</button><button class="btn btn-outline btn-sm" on:click={()=>download('/api/export/outline',()=>{})}>{$t('proofread.downloadOutline')}</button><button class="btn btn-outline btn-sm" on:click={()=>download('/api/proofread/export',()=>{})}>{$t('proofread.downloadReport')}</button></div>
+      <div class="flex gap-2 items-center flex-wrap"><h2 class="card-title flex-1">{$t('proofread.title')}</h2><button class="btn btn-outline btn-sm" on:click={()=>download('/api/export/txt',()=>{})}>{$t('proofread.downloadBook')}</button><button class="btn btn-outline btn-sm" on:click={()=>download('/api/export/outline',()=>{})}>{$t('proofread.downloadOutline')}</button><button class="btn btn-outline btn-sm" on:click={()=>download('/api/proofread/export',()=>{})}>{$t('proofread.downloadReport')}</button>{#if $progress?.trilium_source}<button class="btn btn-outline btn-sm" on:click={publishTrilium} disabled={$taskRunning || publishingTrilium} title={$t('trilium.publish.help')}>{$t('trilium.publish.button')}</button>{/if}</div>
+      {#if $progress?.trilium_source}<p class="text-xs text-base-content/65">{$t('trilium.publish.parent', { title: $progress.trilium_source.title || $progress.trilium_source.note_id, id: $progress.trilium_source.note_id })}</p>{/if}
       <p class="text-xs opacity-60">{$t('proofread.boundary')}</p>
       <textarea class="textarea textarea-bordered textarea-sm w-full" bind:value={preferences} placeholder={$t('proofread.preferences')}></textarea>
       <div class="flex gap-2"><button class="btn btn-primary btn-sm" disabled={$taskRunning} on:click={applyAll}>{$t('proofread.apply')}</button><button class="btn btn-outline btn-sm" disabled={$taskRunning} on:click={analyze}>{$t('proofread.analyze')}</button></div>
