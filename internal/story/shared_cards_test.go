@@ -105,7 +105,7 @@ func TestPlanningCardRoundTripAndFormOnlyImport(t *testing.T) {
 	api := &config.APIConfig{}
 	cfg := config.DefaultConfig()
 	settings := &ProjectSettings{}
-	card, err := CaptureSharedCard(SharedCardCaptureRequest{Kind: SharedCardPlanning, Planning: &SharedPlanningCard{LongTermDirection: "守护王国", EndingIntent: "final", EndingStyle: "custom", EndingRequirements: "揭露真相"}}, "book", "zh", api, cfg, settings)
+	card, err := CaptureSharedCard(SharedCardCaptureRequest{Kind: SharedCardPlanning, Planning: &SharedPlanningCard{Synopsis: "王国遭遇危机", LongTermDirection: "守护王国", EndingIntent: "final", EndingStyle: "custom", EndingRequirements: "揭露真相"}}, "book", "zh", api, cfg, settings)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -122,12 +122,42 @@ func TestPlanningCardRoundTripAndFormOnlyImport(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if result.Planning == nil || result.Planning.EndingRequirements != "揭露真相" || state.LongTermDirection != "existing" || len(state.Chapters) != 1 || nextCfg.Story != cfg.Story || len(nextSettings.Characters) != 0 {
+	if result.Planning == nil || result.Planning.Synopsis != "王国遭遇危机" || result.Planning.EndingRequirements != "揭露真相" || state.LongTermDirection != "existing" || len(state.Chapters) != 1 || nextCfg.Story != cfg.Story || len(nextSettings.Characters) != 0 {
 		t.Fatalf("planning import changed project: %+v %+v", result, state)
 	}
 	loaded.Planning.EndingRequirements = ""
 	if err := ValidateSharedCard(loaded); err == nil {
 		t.Fatal("invalid custom ending was accepted")
+	}
+}
+
+func TestPlanningCardSynopsisOnlyAndLegacyCard(t *testing.T) {
+	api := &config.APIConfig{}
+	cfg := config.DefaultConfig()
+	settings := &ProjectSettings{}
+	card, err := CaptureSharedCard(SharedCardCaptureRequest{Kind: SharedCardPlanning, Planning: &SharedPlanningCard{Synopsis: "只有本批梗概", EndingIntent: "serial"}}, "book", "zh", api, cfg, settings)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if card.Name != "只有本批梗概" {
+		t.Fatalf("unexpected synopsis-only name: %q", card.Name)
+	}
+	root := t.TempDir()
+	if err := SaveSharedCard(root, card); err != nil {
+		t.Fatal(err)
+	}
+	loaded, err := LoadSharedCard(root, card.ID)
+	if err != nil || loaded.Planning.Synopsis != "只有本批梗概" {
+		t.Fatalf("synopsis-only card failed to load: %+v, %v", loaded, err)
+	}
+	loaded.Planning.Synopsis = ""
+	loaded.Planning.LongTermDirection = "旧规划卡的长期走向"
+	if err := SaveSharedCard(root, loaded); err != nil {
+		t.Fatal(err)
+	}
+	legacy, err := LoadSharedCard(root, card.ID)
+	if err != nil || legacy.Planning.Synopsis != "" {
+		t.Fatalf("legacy planning card failed to load: %+v, %v", legacy, err)
 	}
 }
 

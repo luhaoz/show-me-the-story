@@ -37,6 +37,8 @@ for (const kind of ['api', 'story', 'style', 'character', 'worldview', 'organiza
 const outlineSource = readFileSync(new URL('../pages/Outline.svelte', import.meta.url), 'utf8');
 assert.match(outlineSource, /saveSettingCard\('planning'/, 'outline must save the planning form as a card');
 assert.match(outlineSource, /planningCardDraft\.subscribe/, 'outline must apply a planning card to the form');
+assert.match(outlineSource, /outline_synopsis: planningRequirements\.trim\(\)/, 'planning card must capture the batch synopsis');
+assert.match(outlineSource, /planningRequirements = card\.outline_synopsis/, 'planning card must restore the batch synopsis');
 const drawerSource = readFileSync(new URL('../components/SharedCardLibrary.svelte', import.meta.url), 'utf8');
 assert.match(drawerSource, /readSettingCardDrag/);
 assert.match(drawerSource, /beginSharedCardDrag/);
@@ -49,5 +51,6 @@ for (const field of ['appearance', 'personality', 'background', 'motivation', 'a
 for (const kind of ['worldview', 'organization', 'relation', 'api', 'story', 'style', 'planning']) {
   assert.match(editorSource, new RegExp(`draft\\.${kind}`), `shared editor missing ${kind} form`);
 }
+assert.match(editorSource, /bind:value=\{draft\.planning\.outline_synopsis\}/, 'planning card editor must expose the batch synopsis');
 
 console.log('sharedCards.check.js: ok');

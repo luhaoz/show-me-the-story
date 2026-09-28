@@ -23,6 +23,7 @@ func sharedCardView(card *story.SharedCard, detail bool) map[string]any {
 		view["has_api_key"] = card.API.APIKey != ""
 	}
 	if card.Planning != nil {
+		view["planning_synopsis"] = story.SharedPlanningSummary(card.Planning.Synopsis)
 		view["planning_direction"] = story.SharedPlanningSummary(card.Planning.LongTermDirection)
 		view["planning_ending_intent"] = card.Planning.EndingIntent
 		view["planning_ending_style"] = card.Planning.EndingStyle

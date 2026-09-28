@@ -54,7 +54,7 @@ The [first-story walkthrough](docs/guide.en.md#first-story) explains the input, 
 - Batch outlines, long-term direction, ending intent, and planning reviews.
 - Characters, worldview, organizations, relationship graphs, and story knowledge.
 - A global shared-card library for saving and reusing API, story, style, character, worldview, organization, or relationship cards individually.
-- Save alternative long-term directions and ending plans as editable planning cards, then fill the outline form from one.
+- Save alternative batch synopses, long-term directions, and ending plans as editable planning cards, then fill the outline form from one.
 - Chapter drafting, review, paragraph editing, targeted revision, and optional auto-confirm.
 - Extracted facts with source references, setting-change proposals, and foreshadow tracking.
 - Save knowledge and revise a chapter: selected entries enter that request in full; later writing retrieves relevant entries.

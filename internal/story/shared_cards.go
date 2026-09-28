@@ -41,6 +41,7 @@ type SharedStyleCard struct {
 }
 
 type SharedPlanningCard struct {
+	Synopsis           string `json:"outline_synopsis,omitempty"`
 	LongTermDirection  string `json:"long_term_direction"`
 	EndingIntent       string `json:"ending_intent"`
 	EndingStyle        string `json:"ending_style,omitempty"`
@@ -162,7 +163,10 @@ func CaptureSharedCard(req SharedCardCaptureRequest, project, language string, a
 		if card.Name == "" {
 			card.Name = truncateSharedCardName(strings.Join(strings.Fields(card.Planning.LongTermDirection), " "), 40)
 			if card.Name == "" {
-				card.Name = "Outline planning"
+				card.Name = truncateSharedCardName(strings.Join(strings.Fields(card.Planning.Synopsis), " "), 40)
+				if card.Name == "" {
+					card.Name = "Outline planning"
+				}
 			}
 		}
 	case SharedCardCharacter:
@@ -234,8 +238,8 @@ func truncateSharedCardName(value string, limit int) string {
 	return string(runes[:limit])
 }
 
-func SharedPlanningSummary(direction string) string {
-	return truncateSharedCardName(strings.TrimSpace(direction), 80)
+func SharedPlanningSummary(value string) string {
+	return truncateSharedCardName(strings.TrimSpace(value), 80)
 }
 
 func captureRelationEndpoint(card *SharedCard, settings *ProjectSettings, kind, id string) error {
@@ -337,7 +341,7 @@ func ValidateSharedCard(card *SharedCard) error {
 	}
 	if card.Planning != nil {
 		p := card.Planning
-		if len([]rune(p.LongTermDirection)) > 20000 || len([]rune(p.EndingRequirements)) > 5000 || (p.EndingIntent != "serial" && p.EndingIntent != "final" && p.EndingIntent != "sequel") || (p.EndingIntent == "serial" && (p.EndingStyle != "" || p.EndingRequirements != "")) || (p.EndingIntent != "serial" && p.EndingStyle != "closed" && p.EndingStyle != "open" && p.EndingStyle != "custom") || (p.EndingStyle == "custom" && strings.TrimSpace(p.EndingRequirements) == "") || (p.EndingStyle != "custom" && p.EndingRequirements != "") || (strings.TrimSpace(p.LongTermDirection) == "" && p.EndingIntent == "serial") {
+		if len([]rune(p.Synopsis)) > 20000 || len([]rune(p.LongTermDirection)) > 20000 || len([]rune(p.EndingRequirements)) > 5000 || (p.EndingIntent != "serial" && p.EndingIntent != "final" && p.EndingIntent != "sequel") || (p.EndingIntent == "serial" && (p.EndingStyle != "" || p.EndingRequirements != "")) || (p.EndingIntent != "serial" && p.EndingStyle != "closed" && p.EndingStyle != "open" && p.EndingStyle != "custom") || (p.EndingStyle == "custom" && strings.TrimSpace(p.EndingRequirements) == "") || (p.EndingStyle != "custom" && p.EndingRequirements != "") || (strings.TrimSpace(p.Synopsis) == "" && strings.TrimSpace(p.LongTermDirection) == "" && p.EndingIntent == "serial") {
 			return errors.New("invalid planning card")
 		}
 	}

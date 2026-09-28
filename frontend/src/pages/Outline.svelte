@@ -106,6 +106,7 @@
   $: if (p && !directionLoaded) { longTermDirection = p.long_term_direction || ''; directionLoaded = true; }
   onMount(() => planningCardDraft.subscribe(card => {
     if (!card) return;
+    if (card.outline_synopsis) planningRequirements = card.outline_synopsis;
     longTermDirection = card.long_term_direction || '';
     directionLoaded = true;
     endingIntent = card.ending_intent || 'serial';
@@ -116,6 +117,7 @@
   }));
   async function savePlanningCard() {
     await saveSettingCard('planning', '', $t, { planning: {
+      outline_synopsis: planningRequirements.trim(),
       long_term_direction: longTermDirection.trim(),
       ending_intent: endingIntent,
       ending_style: endingIntent === 'serial' ? '' : endingStyle,
@@ -363,7 +365,7 @@
       {/if}
       <div class="flex justify-end gap-2">
         {#if replacingBatch}<button class="btn btn-ghost btn-sm" disabled={$taskRunning} on:click={() => { replacingBatch = null; planningRequirements = ''; }}>{$t('common.cancel')}</button>{/if}
-        <button class="btn btn-outline btn-sm" on:click={savePlanningCard} disabled={$taskRunning || (!longTermDirection.trim() && endingIntent === 'serial') || (endingIntent !== 'serial' && endingStyle === 'custom' && !endingRequirements.trim())} title={$t('sharedCards.planningHelp')}>{$t('sharedCards.planningSave')}</button>
+        <button class="btn btn-outline btn-sm" on:click={savePlanningCard} disabled={$taskRunning || (!planningRequirements.trim() && !longTermDirection.trim() && endingIntent === 'serial') || (endingIntent !== 'serial' && endingStyle === 'custom' && !endingRequirements.trim())} title={$t('sharedCards.planningHelp')}>{$t('sharedCards.planningSave')}</button>
         <button class="btn btn-primary btn-sm" on:click={generateContinuation} disabled={batchBlocked || !validCount || !planningRequirements.trim() || (endingIntent !== 'serial' && endingStyle === 'custom' && !endingRequirements.trim())}>{$t(batchActionKey)}</button>
       </div>
     </div>

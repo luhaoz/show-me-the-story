@@ -88,8 +88,8 @@ func TestSharedCharacterCardImportsAsNewEntity(t *testing.T) {
 func TestPlanningCardCapturesDraftAndUseDoesNotSaveProject(t *testing.T) {
 	h := sharedCardTestHandler(t)
 	h.state.LongTermDirection = "saved direction"
-	id := createSharedCard(t, h, `{"kind":"planning","planning":{"long_term_direction":"new direction","ending_intent":"sequel","ending_style":"open"}}`)
-	update := httptest.NewRequest("PUT", "/api/shared-cards/"+id, strings.NewReader(`{"name":"New plan","planning":{"long_term_direction":"edited direction","ending_intent":"final","ending_style":"closed"}}`))
+	id := createSharedCard(t, h, `{"kind":"planning","planning":{"outline_synopsis":"first synopsis","long_term_direction":"new direction","ending_intent":"sequel","ending_style":"open"}}`)
+	update := httptest.NewRequest("PUT", "/api/shared-cards/"+id, strings.NewReader(`{"name":"New plan","planning":{"outline_synopsis":"edited synopsis","long_term_direction":"edited direction","ending_intent":"final","ending_style":"closed"}}`))
 	update.SetPathValue("id", id)
 	w := httptest.NewRecorder()
 	h.PutSharedCard(w, update)
@@ -100,7 +100,7 @@ func TestPlanningCardCapturesDraftAndUseDoesNotSaveProject(t *testing.T) {
 	use.SetPathValue("id", id)
 	w = httptest.NewRecorder()
 	h.PostSharedCardImport(w, use)
-	if w.Code != 200 || !strings.Contains(w.Body.String(), `"long_term_direction":"edited direction"`) || h.state.LongTermDirection != "saved direction" {
+	if w.Code != 200 || !strings.Contains(w.Body.String(), `"outline_synopsis":"edited synopsis"`) || !strings.Contains(w.Body.String(), `"long_term_direction":"edited direction"`) || h.state.LongTermDirection != "saved direction" {
 		t.Fatalf("use changed project: %d %s", w.Code, w.Body.String())
 	}
 	if _, err := os.Stat(h.progressPath); !os.IsNotExist(err) {
