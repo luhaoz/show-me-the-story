@@ -78,6 +78,7 @@ export default {
 "facts.pending": "Chapters awaiting sync: {chapters}",
 "facts.retry": "Retry sync",
 "facts.settingsPending": "Setting changes to review ({count})",
+"facts.changeRefreshed": "The setting proposal was updated to match the current character; review it before accepting again",
 "facts.sourceChanged": "Source prose changed; review later dependencies and current settings",
 "facts.before": "Current / previous",
 "facts.after": "Proposed",

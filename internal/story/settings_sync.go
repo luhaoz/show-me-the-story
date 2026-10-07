@@ -3,6 +3,7 @@ package story
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"reflect"
@@ -23,6 +24,48 @@ type SettingChange struct {
 	Status   string          `json:"status"` // applied, pending, rejected, reverted
 	Reason   string          `json:"reason,omitempty"`
 }
+
+var ErrSettingChangeRebased = errors.New("setting_change_rebased")
+var ErrSettingChangeSourceOutdated = errors.New("setting_change_source_outdated")
+
+// Keep only the proposed field changes when another decision updates the same entity.
+func rebaseSettingChange(change *SettingChange, current map[string]any) {
+	before, after := change.Before, change.After
+	change.Before = current
+	if after == nil {
+		return
+	}
+	rebased := make(map[string]any, len(current)+len(after))
+	for field, value := range current {
+		rebased[field] = value
+	}
+	if current == nil {
+		// A deleted entity can only be restored from the complete proposed snapshot.
+		for field, value := range after {
+			rebased[field] = value
+		}
+	} else {
+		for field, value := range after {
+			if field == "id" {
+				continue
+			}
+			old, existed := before[field]
+			if !existed || !reflect.DeepEqual(old, value) {
+				rebased[field] = value
+			}
+		}
+		for field := range before {
+			if field == "id" {
+				continue
+			}
+			if _, exists := after[field]; !exists {
+				delete(rebased, field)
+			}
+		}
+	}
+	change.After = rebased
+}
+
 type settingDelta struct {
 	Kind      string         `json:"kind"`
 	Entity    map[string]any `json:"entity"`
@@ -419,11 +462,17 @@ func ResolveSettingChange(s *ProjectSettings, state *Progress, id int, accept bo
 			if c.After == nil && entityHasDependents(next, c.EntityID) {
 				return fmt.Errorf("setting_has_dependents")
 			}
-			if !reflect.DeepEqual(entityAt(next, c.Kind, c.EntityID), c.Before) {
-				return fmt.Errorf("content_version_conflict")
-			}
 			if c.Reason != "source_changed" && !ReferenceLive(state, c.Source) {
-				return fmt.Errorf("content_version_conflict")
+				return ErrSettingChangeSourceOutdated
+			}
+			current := entityAt(next, c.Kind, c.EntityID)
+			if !reflect.DeepEqual(current, c.Before) {
+				rebaseSettingChange(c, current)
+				if err := SaveProjectSettings(path, next); err != nil {
+					return err
+				}
+				*s = *next
+				return ErrSettingChangeRebased
 			}
 			if c.After != nil {
 				if err := validateEntity(next, c.Kind, c.After); err != nil {
@@ -436,6 +485,13 @@ func ResolveSettingChange(s *ProjectSettings, state *Progress, id int, accept bo
 			c.Status = "applied"
 			if c.Reason == "source_changed" {
 				c.Status = "resolved"
+			}
+			current = entityAt(next, c.Kind, c.EntityID)
+			for j := range next.StoryChanges {
+				other := &next.StoryChanges[j]
+				if other.Status == "pending" && other.Kind == c.Kind && other.EntityID == c.EntityID && !reflect.DeepEqual(other.Before, current) {
+					rebaseSettingChange(other, current)
+				}
 			}
 		} else {
 			c.Status = "rejected"

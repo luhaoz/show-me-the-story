@@ -79,6 +79,7 @@ export default {
 "facts.pending": "待同步章节：{chapters}",
 "facts.retry": "重试同步",
 "facts.settingsPending": "待确认设定变化（{count}）",
+"facts.changeRefreshed": "人设建议已按当前设定更新，请核对后再次采纳",
 "facts.sourceChanged": "来源正文已变更；请核对后续依赖及当前设定",
 "facts.before": "当前／原值",
 "facts.after": "建议值",

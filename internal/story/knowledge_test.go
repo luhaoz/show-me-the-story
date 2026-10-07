@@ -3,6 +3,7 @@ package story
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -362,6 +363,75 @@ func TestSourceWithdrawalProposalSurvivesRetry(t *testing.T) {
 	}
 	if s.Characters[0].Age != "author override" {
 		t.Fatal("dismiss changed author settings")
+	}
+}
+
+func TestAcceptingOneCharacterChangeRefreshesOtherProposals(t *testing.T) {
+	for _, tc := range []struct {
+		name, field, value string
+	}{
+		{"different field", "background", "Pilot"},
+		{"same field", "age", "22"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ch := factChapter(1, "Alice changes.")
+			state := &Progress{Chapters: []ChapterState{ch}}
+			s := &ProjectSettings{Characters: []Character{{ID: "c_1", Name: "Alice", Age: "20"}}}
+			beforeAge, afterAge := entityAt(s, "characters", "c_1"), entityAt(s, "characters", "c_1")
+			afterAge["age"] = "21"
+			beforeOther, afterOther := entityAt(s, "characters", "c_1"), entityAt(s, "characters", "c_1")
+			afterOther[tc.field] = tc.value
+			ref := MemoryReference{Chapter: 1, BlockID: ch.Blocks[0].ID, Quote: ch.Blocks[0].Text, ContentRev: ChapterRevision(ch)}
+			s.StoryChanges = []SettingChange{
+				{ID: 1, Kind: "characters", EntityID: "c_1", Before: beforeAge, After: afterAge, Source: ref, Status: "pending"},
+				{ID: 2, Kind: "characters", EntityID: "c_1", Before: beforeOther, After: afterOther, Source: ref, Status: "pending"},
+			}
+			path := filepath.Join(t.TempDir(), "settings.json")
+			if err := ResolveSettingChange(s, state, 1, true, path); err != nil {
+				t.Fatal(err)
+			}
+			second := s.StoryChanges[1]
+			if second.Before["age"] != "21" || second.After[tc.field] != tc.value || second.Status != "pending" {
+				t.Fatalf("second proposal was not refreshed: %+v", second)
+			}
+			if tc.field == "background" && second.After["age"] != "21" {
+				t.Fatalf("unrelated accepted field was lost: %+v", second.After)
+			}
+			if err := ResolveSettingChange(s, state, 2, true, path); err != nil {
+				t.Fatal(err)
+			}
+			if s.Characters[0].Age != map[string]string{"background": "21", "age": "22"}[tc.field] || (tc.field == "background" && s.Characters[0].Background != "Pilot") {
+				t.Fatalf("second acceptance lost changes: %+v", s.Characters[0])
+			}
+		})
+	}
+}
+
+func TestStaleCharacterChangeCanBeReviewedAndAccepted(t *testing.T) {
+	ch := factChapter(1, "Alice changes.")
+	state := &Progress{Chapters: []ChapterState{ch}}
+	s := &ProjectSettings{Characters: []Character{{ID: "c_1", Name: "Alice", Age: "20"}}}
+	before, after := entityAt(s, "characters", "c_1"), entityAt(s, "characters", "c_1")
+	after["age"] = "22"
+	s.StoryChanges = []SettingChange{{ID: 1, Kind: "characters", EntityID: "c_1", Before: before, After: after, Source: MemoryReference{Chapter: 1, BlockID: ch.Blocks[0].ID, Quote: ch.Blocks[0].Text, ContentRev: ChapterRevision(ch)}, Status: "pending"}}
+	s.Characters[0].Age = "21"
+	blocked := filepath.Join(t.TempDir(), "occupied")
+	if err := os.Mkdir(blocked, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := ResolveSettingChange(s, state, 1, true, blocked); err == nil || s.StoryChanges[0].Before["age"] != "20" {
+		t.Fatalf("failed refresh changed in-memory proposal: %+v, %v", s.StoryChanges[0], err)
+	}
+	path := filepath.Join(t.TempDir(), "settings.json")
+	if err := ResolveSettingChange(s, state, 1, true, path); !errors.Is(err, ErrSettingChangeRebased) {
+		t.Fatalf("stale proposal was not paused for review: %v", err)
+	}
+	loaded, err := LoadProjectSettings(path)
+	if err != nil || loaded.Characters[0].Age != "21" || loaded.StoryChanges[0].Before["age"] != "21" || loaded.StoryChanges[0].After["age"] != "22" {
+		t.Fatalf("refreshed proposal was not persisted: %+v, %v", loaded, err)
+	}
+	if err := ResolveSettingChange(s, state, 1, true, path); err != nil || s.Characters[0].Age != "22" {
+		t.Fatalf("reviewed proposal could not be accepted: %+v, %v", s.Characters[0], err)
 	}
 }
 

@@ -236,6 +236,8 @@ The facts/settings panel inside the prose card is collapsed by default; the summ
 
 Accepted prose can drive setting evolution. Conflicts with author settings or insufficient evidence produce proposals to accept or ignore. Changes to Story knowledge require approval even if the model calls them plot evolution.
 
+When several pending proposals concern the same character, accept them one at a time. After one is accepted, the others show updated before and proposed values while preserving unrelated accepted fields. If the character changed elsewhere, the first attempt refreshes the proposal for review; accept it again to apply it. The panel also has a Refresh button. Proposals with invalid source prose still require a new sync or dismissal.
+
 If synchronization fails, inspect the log and retry through the knowledge panel. Saved prose and synchronized knowledge are separate outcomes; pending items can remain after a task ends.
 
 Foreshadows can be suggested by AI or created manually. Check descriptions, planting and resolution chapters, and planted/progressing/resolved/abandoned states. Before completion, resolve or retire unused threads so they are not treated as future obligations.

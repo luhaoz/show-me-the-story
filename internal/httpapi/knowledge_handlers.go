@@ -2,8 +2,10 @@ package httpapi
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
+	"showmethestory/internal/fsutil"
 	"showmethestory/internal/i18n"
 	"showmethestory/internal/story"
 	"strconv"
@@ -126,6 +128,10 @@ func (h *Handlers) GetKnowledge(w http.ResponseWriter, r *http.Request) {
 	for _, c := range h.settings.StoryChanges {
 		if c.Status == "pending" {
 			changes = append(changes, c)
+			if c.Reason != "source_changed" && !story.ReferenceLive(h.state, c.Source) && c.Source.Chapter > 0 && !seen[c.Source.Chapter] {
+				pending = append(pending, c.Source.Chapter)
+				seen[c.Source.Chapter] = true
+			}
 		}
 		if c.Status == "applied" && !story.ReferenceLive(h.state, c.Source) && !seen[c.Source.Chapter] {
 			pending = append(pending, c.Source.Chapter)
@@ -155,6 +161,18 @@ func (h *Handlers) PostSettingChange(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := story.ResolveSettingChange(h.settings, h.state, body.ID, *body.Accept, h.settingsPath); err != nil {
+		if errors.Is(err, story.ErrSettingChangeSourceOutdated) {
+			h.writeJSON(w, http.StatusConflict, map[string]string{"code": "setting_change_source_outdated", "error": i18n.T(i18n.FromRequest(r), "setting_change_source_outdated")})
+			return
+		}
+		if errors.Is(err, story.ErrSettingChangeRebased) {
+			h.writeJSON(w, http.StatusConflict, map[string]string{"code": "setting_change_rebased", "error": i18n.T(i18n.FromRequest(r), "setting_change_rebased")})
+			return
+		}
+		if _, ok := fsutil.AsSaveError(err); ok {
+			h.writeErrorReq(w, r, http.StatusInternalServerError, "save_failed", err)
+			return
+		}
 		if err.Error() == "content_version_conflict" || err.Error() == "setting_has_dependents" {
 			h.writeErrorReq(w, r, http.StatusConflict, err.Error())
 			return

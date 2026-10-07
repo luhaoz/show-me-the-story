@@ -186,3 +186,53 @@ func TestKnowledgeQueryReturnsEvidenceAndPending(t *testing.T) {
 		t.Fatal(res.Body.String())
 	}
 }
+
+func TestSettingChangeConflictReturnsRefreshableProposal(t *testing.T) {
+	h := factHandlers(t)
+	h.settingsPath = filepath.Join(t.TempDir(), "settings.json")
+	h.settings.Characters = []story.Character{{ID: "c_1", Name: "Alice", Age: "21"}}
+	h.settings.StoryChanges = []story.SettingChange{{
+		ID: 1, Kind: "characters", EntityID: "c_1", Status: "pending",
+		Before: map[string]any{"id": "c_1", "name": "Alice", "age": "20"},
+		After:  map[string]any{"id": "c_1", "name": "Alice", "age": "22"},
+		Source: story.MemoryReference{Chapter: 1, BlockID: 1, Quote: "Alice has a scar.", ContentRev: story.ChapterRevision(h.state.Chapters[0])},
+	}}
+	call := func() *httptest.ResponseRecorder {
+		res := httptest.NewRecorder()
+		h.PostSettingChange(res, httptest.NewRequest("POST", "/api/settings/story-changes", strings.NewReader(`{"id":1,"accept":true}`)))
+		return res
+	}
+	if res := call(); res.Code != http.StatusConflict || !strings.Contains(res.Body.String(), `"code":"setting_change_rebased"`) {
+		t.Fatalf("stale proposal did not request review: %d %s", res.Code, res.Body.String())
+	}
+	query := httptest.NewRecorder()
+	h.GetKnowledge(query, httptest.NewRequest("GET", "/api/knowledge?chapter=1", nil))
+	if query.Code != http.StatusOK || !strings.Contains(query.Body.String(), `"age":"21"`) || !strings.Contains(query.Body.String(), `"age":"22"`) {
+		t.Fatalf("refreshed proposal unavailable: %d %s", query.Code, query.Body.String())
+	}
+	if res := call(); res.Code != http.StatusOK || h.settings.Characters[0].Age != "22" {
+		t.Fatalf("reviewed proposal could not be accepted: %d %s", res.Code, res.Body.String())
+	}
+}
+
+func TestSettingChangeWithChangedSourceRequestsKnowledgeSync(t *testing.T) {
+	h := factHandlers(t)
+	h.settingsPath = filepath.Join(t.TempDir(), "settings.json")
+	h.settings.Characters = []story.Character{{ID: "c_1", Name: "Alice", Age: "20"}}
+	h.settings.StoryChanges = []story.SettingChange{{
+		ID: 1, Kind: "characters", EntityID: "c_1", Status: "pending",
+		Before: map[string]any{"id": "c_1", "name": "Alice", "age": "20"},
+		After:  map[string]any{"id": "c_1", "name": "Alice", "age": "21"},
+		Source: story.MemoryReference{Chapter: 1, BlockID: 1, Quote: "Old source", ContentRev: story.ChapterRevision(h.state.Chapters[0])},
+	}}
+	res := httptest.NewRecorder()
+	h.PostSettingChange(res, httptest.NewRequest("POST", "/api/settings/story-changes", strings.NewReader(`{"id":1,"accept":true}`)))
+	if res.Code != http.StatusConflict || !strings.Contains(res.Body.String(), `"code":"setting_change_source_outdated"`) || h.settings.Characters[0].Age != "20" {
+		t.Fatalf("changed source was accepted or gave no recovery action: %d %s", res.Code, res.Body.String())
+	}
+	query := httptest.NewRecorder()
+	h.GetKnowledge(query, httptest.NewRequest("GET", "/api/knowledge?chapter=1", nil))
+	if !strings.Contains(query.Body.String(), `"pending_chapters":[1]`) {
+		t.Fatalf("changed source did not expose sync action: %s", query.Body.String())
+	}
+}

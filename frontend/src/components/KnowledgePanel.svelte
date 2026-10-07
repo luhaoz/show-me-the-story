@@ -41,7 +41,15 @@
   async function resolve(change, accept) {
     try {
       settings.set(await api('POST', '/api/settings/story-changes', { id: change.id, accept }));
-    } catch (e) { addToast(e.message, 'error'); }
+      await refresh(chapterNum, null, null, false);
+    } catch (e) {
+      if (e.code === 'setting_change_rebased') {
+        await refresh(chapterNum, null, null, false);
+        addToast($t('facts.changeRefreshed'), 'warning');
+      } else {
+        addToast(e.message, 'error');
+      }
+    }
   }
 </script>
 
@@ -82,6 +90,7 @@
     {#if changes.length}
       <details>
         <summary class="cursor-pointer">{$t('facts.settingsPending', {count: changes.length})}</summary>
+        <button class="btn btn-outline btn-xs mt-2" disabled={$taskRunning} on:click={() => refresh(chapterNum, null, null, false)}>{$t('common.refresh')}</button>
         {#each changes as change}
           <div class="border-t border-base-content/10 py-2 space-y-1">
             <p>{change.after?.name || change.before?.name || change.after?.label || displayValue(change.entity_id)} — {change.reason === 'source_changed' ? $t('facts.sourceChanged') : change.reason}</p>
